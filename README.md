@@ -9,7 +9,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
 <p align="center">
-  <img src="docs/images/dashboard-preview.png" alt="TransTrack Dashboard" width="800">
+  <img src="docs/images/dashboard-preview.svg" alt="TransTrack Dashboard" width="800">
 </p>
 
 **TransTrack** is a comprehensive, **fully offline**, **HIPAA-compliant** desktop application for managing organ transplant waitlists. Built with modern technologies and designed for transplant centers, hospitals, and tissue banks that require regulatory compliance without cloud dependencies.
@@ -64,7 +64,7 @@
 
 | Dashboard | Donor Matching | Patient Details |
 |-----------|----------------|-----------------|
-| ![Dashboard](docs/images/dashboard-thumb.png) | ![Matching](docs/images/matching-thumb.png) | ![Patient](docs/images/patient-thumb.png) |
+| ![Dashboard](docs/images/dashboard-thumb.svg) | ![Matching](docs/images/matching-thumb.svg) | ![Patient](docs/images/patient-thumb.svg) |
 
 ---
 

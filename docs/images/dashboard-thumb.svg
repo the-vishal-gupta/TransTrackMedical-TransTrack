@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="150" viewBox="0 0 250 150">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc"/>
+      <stop offset="100%" style="stop-color:#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="250" height="150" fill="url(#bg)" rx="8"/>
+  <rect x="0" y="0" width="250" height="20" fill="#ffffff"/>
+  <rect x="8" y="5" width="10" height="10" rx="2" fill="#0891b2"/>
+  <rect x="10" y="35" width="50" height="25" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="65" y="35" width="50" height="25" rx="4" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <rect x="120" y="35" width="50" height="25" rx="4" fill="#fef2f2" stroke="#fecaca"/>
+  <rect x="175" y="35" width="50" height="25" rx="4" fill="#eff6ff" stroke="#bfdbfe"/>
+  <rect x="10" y="70" width="70" height="70" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="90" y="70" width="70" height="70" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="170" y="70" width="70" height="70" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="125" y="145" font-family="Arial" font-size="8" fill="#64748b" text-anchor="middle">Dashboard</text>
+</svg>
