@@ -2,7 +2,8 @@
 
 ## Transplant Waitlist Management System
 
-[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Commercial-blue.svg)](LICENSE)
+[![Price](https://img.shields.io/badge/price-from%20%242%2C499-green.svg)](PRICING.md)
 [![HIPAA Compliant](https://img.shields.io/badge/HIPAA-Compliant-green.svg)](docs/COMPLIANCE.md)
 [![FDA 21 CFR Part 11](https://img.shields.io/badge/FDA-21%20CFR%20Part%2011-green.svg)](docs/COMPLIANCE.md)
 [![AATB Standards](https://img.shields.io/badge/AATB-Standards-green.svg)](docs/COMPLIANCE.md)
@@ -241,23 +242,52 @@ npm run lint
 
 ---
 
-## License
+## Pricing & Licensing
 
-TransTrack is proprietary software. For licensing inquiries, please contact:
+TransTrack is commercial software requiring a paid license for use.
 
-📧 licensing@transtrack.local
+| License | Price | Installations | Support |
+|---------|-------|---------------|---------|
+| **Starter** | $2,499 | 1 workstation | Email (48hr) |
+| **Professional** | $7,499 | Up to 5 | Priority (24hr) |
+| **Enterprise** | $24,999 | Unlimited | 24/7 Phone & Email |
+
+### [View Full Pricing Details →](PRICING.md)
+
+**Discounts Available:**
+- Nonprofit organizations: 25% off
+- Academic institutions: 40% off
+- Multi-year commitments: Volume pricing
+
+📧 **NicMGildehaus83@outlook.com**
+
+### Request a Demo
+
+Interested in seeing TransTrack in action? Schedule a personalized demo:
+
+📧 **NicMGildehaus83@outlook.com**
+
+### 14-Day Evaluation
+
+Qualified healthcare organizations can request a free 14-day evaluation license.
 
 ---
 
 ## Support
 
-### Commercial Support
-For enterprise support, training, and customization:
-📧 enterprise@transtrack.local
+### Sales & Licensing
+📧 NicMGildehaus83@outlook.com
 
-### Community Support
-- [GitHub Issues](../../issues)
-- [Discussion Forum](../../discussions)
+### Technical Support (Licensed Customers)
+📧 NicMGildehaus83@outlook.com
+
+### Enterprise Solutions
+Custom integrations, training, and dedicated support:
+📧 NicMGildehaus83@outlook.com
+
+### Pre-Sales Questions
+- [GitHub Discussions](../../discussions)
+- [Request a Demo](mailto:NicMGildehaus83@outlook.com)
 
 ---
 

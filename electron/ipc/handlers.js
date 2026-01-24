@@ -9,6 +9,7 @@ const { ipcMain, dialog } = require('electron');
 const { getDatabase } = require('../database/init');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
+const licenseManager = require('../license/manager');
 
 // Current session store
 let currentSession = null;
@@ -453,6 +454,19 @@ function setupIPCHandlers() {
       settings[row.key] = JSON.parse(row.value);
     }
     return settings;
+  });
+  
+  // ===== LICENSE MANAGEMENT =====
+  ipcMain.handle('license:getInfo', async () => {
+    return licenseManager.getLicenseInfo();
+  });
+  
+  ipcMain.handle('license:activate', async (event, key, customerInfo) => {
+    return await licenseManager.activateLicense(key, customerInfo);
+  });
+  
+  ipcMain.handle('license:isValid', async () => {
+    return licenseManager.isLicenseValid();
   });
   
   // ===== FILE OPERATIONS =====

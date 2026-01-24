@@ -8,6 +8,8 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Login from '@/pages/Login';
+import LicenseActivation from '@/pages/LicenseActivation';
+import { useState, useEffect } from 'react';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -19,6 +21,59 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated } = useAuth();
+  const [licenseValid, setLicenseValid] = useState(null);
+  const [licenseInfo, setLicenseInfo] = useState(null);
+  const [showLicenseScreen, setShowLicenseScreen] = useState(false);
+
+  useEffect(() => {
+    checkLicense();
+  }, []);
+
+  const checkLicense = async () => {
+    if (window.electronAPI?.license) {
+      try {
+        const info = await window.electronAPI.license.getInfo();
+        const isValid = await window.electronAPI.license.isValid();
+        setLicenseInfo(info);
+        setLicenseValid(isValid);
+        
+        // Show license screen if expired or not licensed
+        if (!isValid || (info.evaluationExpired && !info.isLicensed)) {
+          setShowLicenseScreen(true);
+        }
+      } catch (e) {
+        console.error('License check failed:', e);
+        setLicenseValid(true); // Allow in dev mode
+      }
+    } else {
+      // Not in Electron, allow access (development mode)
+      setLicenseValid(true);
+    }
+  };
+
+  // Show loading spinner while checking license
+  if (licenseValid === null) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Checking license...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show license activation if not valid
+  if (showLicenseScreen && !licenseInfo?.isLicensed) {
+    return (
+      <LicenseActivation 
+        onActivated={() => {
+          setShowLicenseScreen(false);
+          checkLicense();
+        }} 
+      />
+    );
+  }
 
   // Show loading spinner while checking auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -53,6 +108,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/login" element={<Login />} />
+      <Route path="/license" element={<LicenseActivation onActivated={() => window.location.reload()} />} />
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
           key={path}

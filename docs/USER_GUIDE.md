@@ -217,8 +217,8 @@ Use the Match Simulator to test hypothetical scenarios without creating actual d
 ## Support
 
 For technical support or feature requests:
-- Email: support@transtrack.local
-- Documentation: https://github.com/TransTrackMedical/TransTrack
+- Email: NicMGildehaus83@outlook.com
+- Documentation: https://github.com/NeuroKoder3/TransTrackMedical-TransTrack
 
 ---
 

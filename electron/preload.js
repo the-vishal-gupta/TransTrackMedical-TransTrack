@@ -175,6 +175,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('view-audit-logs', callback);
   },
   
+  // License management
+  license: {
+    getInfo: () => ipcRenderer.invoke('license:getInfo'),
+    activate: (key, customerInfo) => ipcRenderer.invoke('license:activate', key, customerInfo),
+    isValid: () => ipcRenderer.invoke('license:isValid'),
+  },
+  
   // Platform info
   platform: process.platform,
   isElectron: true
