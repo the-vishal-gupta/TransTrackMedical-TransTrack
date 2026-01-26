@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc"/>
+      <stop offset="100%" style="stop-color:#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGrad3)"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="60" fill="#0891b2"/>
+  <text x="70" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">Disaster Recovery</text>
+  <rect x="32" y="22" width="16" height="16" rx="2" fill="#0e7490"/>
+  <rect x="35" y="25" width="10" height="3" fill="white"/>
+  <rect x="35" y="30" width="10" height="3" fill="white"/>
+  
+  <!-- Status Cards -->
+  <rect x="20" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="35" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Total Backups</text>
+  <text x="35" y="140" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">12</text>
+  
+  <rect x="215" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="230" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Last Backup</text>
+  <text x="230" y="140" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1e293b">2 hours ago</text>
+  
+  <rect x="410" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="425" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Storage Used</text>
+  <text x="425" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#1e293b">1.2 GB</text>
+  
+  <rect x="605" y="80" width="180" height="90" rx="8" fill="#dcfce7" stroke="#86efac"/>
+  <text x="620" y="105" font-family="Arial, sans-serif" font-size="11" fill="#166534">Status</text>
+  <text x="620" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#166534">Protected</text>
+  
+  <!-- Create Backup Section -->
+  <rect x="20" y="190" width="760" height="80" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="40" y="220" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">Create Backup</text>
+  <text x="40" y="240" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Create a new backup of the entire database</text>
+  <rect x="40" y="248" width="500" height="30" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="55" y="268" font-family="Arial, sans-serif" font-size="11" fill="#94a3b8">Backup description (optional)</text>
+  <rect x="560" y="248" width="120" height="30" rx="4" fill="#0891b2"/>
+  <text x="585" y="268" font-family="Arial, sans-serif" font-size="12" fill="white">Create Backup</text>
+  
+  <!-- Backup List -->
+  <rect x="20" y="290" width="760" height="190" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="40" y="320" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">Available Backups</text>
+  <text x="40" y="340" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Manage and restore from previous backups</text>
+  
+  <!-- Backup Item 1 -->
+  <rect x="40" y="355" width="720" height="50" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="55" y="367" width="24" height="24" rx="4" fill="#e2e8f0"/>
+  <text x="90" y="380" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1e293b">transtrack-backup-2026-01-24T10-30.db</text>
+  <text x="90" y="396" font-family="Arial, sans-serif" font-size="10" fill="#64748b">Jan 24, 2026 10:30 " 98.5 MB " 1,247 patients</text>
+  <rect x="520" y="370" width="55" height="22" rx="4" fill="transparent" stroke="#e2e8f0"/>
+  <text x="530" y="385" font-family="Arial, sans-serif" font-size="10" fill="#64748b">manual</text>
+  <rect x="585" y="370" width="55" height="22" rx="4" fill="transparent" stroke="#0891b2"/>
+  <text x="597" y="385" font-family="Arial, sans-serif" font-size="10" fill="#0891b2">Verify</text>
+  <rect x="650" y="370" width="60" height="22" rx="4" fill="transparent" stroke="#0891b2"/>
+  <text x="658" y="385" font-family="Arial, sans-serif" font-size="10" fill="#0891b2">Restore</text>
+  
+  <!-- Backup Item 2 -->
+  <rect x="40" y="415" width="720" height="50" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="55" y="427" width="24" height="24" rx="4" fill="#e2e8f0"/>
+  <text x="90" y="440" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1e293b">transtrack-backup-2026-01-23T22-00.db</text>
+  <text x="90" y="456" font-family="Arial, sans-serif" font-size="10" fill="#64748b">Jan 23, 2026 22:00 " 97.2 MB " 1,245 patients</text>
+  <rect x="520" y="430" width="55" height="22" rx="4" fill="transparent" stroke="#e2e8f0"/>
+  <text x="538" y="445" font-family="Arial, sans-serif" font-size="10" fill="#64748b">auto</text>
+  <rect x="585" y="430" width="55" height="22" rx="4" fill="transparent" stroke="#0891b2"/>
+  <text x="597" y="445" font-family="Arial, sans-serif" font-size="10" fill="#0891b2">Verify</text>
+  <rect x="650" y="430" width="60" height="22" rx="4" fill="transparent" stroke="#0891b2"/>
+  <text x="658" y="445" font-family="Arial, sans-serif" font-size="10" fill="#0891b2">Restore</text>
+</svg>

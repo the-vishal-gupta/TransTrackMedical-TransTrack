@@ -71,9 +71,40 @@
 
 ## Screenshots
 
-| Dashboard | Donor Matching | Patient Details |
-|-----------|----------------|-----------------|
-| ![Dashboard](docs/images/dashboard-thumb.svg) | ![Matching](docs/images/matching-thumb.svg) | ![Patient](docs/images/patient-thumb.svg) |
+### Dashboard Overview
+<p align="center">
+  <img src="docs/images/dashboard-preview.svg" alt="TransTrack Dashboard" width="700">
+</p>
+
+### Patient Waitlist Management
+<p align="center">
+  <img src="docs/images/patient-management.svg" alt="Patient Management" width="700">
+</p>
+
+### Donor-Recipient Matching
+<p align="center">
+  <img src="docs/images/donor-matching.svg" alt="Donor Matching" width="700">
+</p>
+
+### Operational Risk Intelligence
+<p align="center">
+  <img src="docs/images/risk-dashboard.svg" alt="Risk Intelligence Dashboard" width="700">
+</p>
+
+### Compliance Center
+<p align="center">
+  <img src="docs/images/compliance-center.svg" alt="Compliance Center" width="700">
+</p>
+
+### Disaster Recovery
+<p align="center">
+  <img src="docs/images/disaster-recovery.svg" alt="Disaster Recovery" width="700">
+</p>
+
+### Audit Trail (FDA 21 CFR Part 11)
+<p align="center">
+  <img src="docs/images/audit-trail.svg" alt="Audit Trail" width="700">
+</p>
 
 ---
 

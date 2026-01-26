@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8fafc"/>
+      <stop offset="100%" style="stop-color:#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGrad2)"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="60" fill="#0891b2"/>
+  <text x="70" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">Compliance Center</text>
+  <circle cx="40" cy="30" r="15" fill="#0e7490"/>
+  <path d="M40 20 L40 40 M32 30 L48 30" stroke="white" stroke-width="3"/>
+  
+  <!-- Compliance Badges -->
+  <rect x="480" y="18" width="90" height="24" rx="12" fill="transparent" stroke="#86efac"/>
+  <text x="495" y="35" font-family="Arial, sans-serif" font-size="10" fill="#22c55e">HIPAA</text>
+  <rect x="580" y="18" width="100" height="24" rx="12" fill="transparent" stroke="#86efac"/>
+  <text x="588" y="35" font-family="Arial, sans-serif" font-size="10" fill="#22c55e">FDA 21 CFR</text>
+  <rect x="690" y="18" width="70" height="24" rx="12" fill="transparent" stroke="#86efac"/>
+  <text x="705" y="35" font-family="Arial, sans-serif" font-size="10" fill="#22c55e">AATB</text>
+  
+  <!-- Summary Cards -->
+  <rect x="20" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="35" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Total Patients</text>
+  <text x="35" y="140" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">1,247</text>
+  <text x="35" y="158" font-family="Arial, sans-serif" font-size="10" fill="#64748b">892 active</text>
+  
+  <rect x="215" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="230" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Audit Entries</text>
+  <text x="230" y="140" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">45,892</text>
+  <text x="230" y="158" font-family="Arial, sans-serif" font-size="10" fill="#64748b">Last 30 days</text>
+  
+  <rect x="410" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="425" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">System Users</text>
+  <text x="425" y="140" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">28</text>
+  <text x="425" y="158" font-family="Arial, sans-serif" font-size="10" fill="#64748b">4 administrators</text>
+  
+  <rect x="605" y="80" width="180" height="90" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="620" y="105" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Data Completeness</text>
+  <text x="620" y="140" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">94.7%</text>
+  <text x="620" y="158" font-family="Arial, sans-serif" font-size="10" fill="#64748b">1,181 complete records</text>
+  
+  <!-- Validation Report Section -->
+  <rect x="20" y="190" width="760" height="290" rx="8" fill="white" stroke="#e2e8f0"/>
+  <text x="40" y="220" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e293b">System Validation Report</text>
+  <text x="40" y="240" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Formal validation status for regulatory compliance</text>
+  
+  <!-- Section 1 -->
+  <text x="40" y="275" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">1. System Configuration</text>
+  
+  <rect x="40" y="290" width="720" height="35" rx="4" fill="#f8fafc"/>
+  <circle cx="60" cy="307" r="8" fill="#22c55e"/>
+  <path d="M56 307 L59 310 L65 304" stroke="white" stroke-width="2" fill="none"/>
+  <text x="80" y="312" font-family="Arial, sans-serif" font-size="12" fill="#1e293b">Database encryption</text>
+  <text x="520" y="312" font-family="Arial, sans-serif" font-size="11" fill="#64748b">SQLite with encryption enabled</text>
+  <rect x="700" y="297" width="45" height="20" rx="4" fill="#dcfce7"/>
+  <text x="710" y="311" font-family="Arial, sans-serif" font-size="10" fill="#166534">PASS</text>
+  
+  <rect x="40" y="330" width="720" height="35" rx="4" fill="#f8fafc"/>
+  <circle cx="60" cy="347" r="8" fill="#22c55e"/>
+  <path d="M56 347 L59 350 L65 344" stroke="white" stroke-width="2" fill="none"/>
+  <text x="80" y="352" font-family="Arial, sans-serif" font-size="12" fill="#1e293b">Audit logging</text>
+  <text x="520" y="352" font-family="Arial, sans-serif" font-size="11" fill="#64748b">All data modifications logged</text>
+  <rect x="700" y="337" width="45" height="20" rx="4" fill="#dcfce7"/>
+  <text x="710" y="351" font-family="Arial, sans-serif" font-size="10" fill="#166534">PASS</text>
+  
+  <rect x="40" y="370" width="720" height="35" rx="4" fill="#f8fafc"/>
+  <circle cx="60" cy="387" r="8" fill="#22c55e"/>
+  <path d="M56 387 L59 390 L65 384" stroke="white" stroke-width="2" fill="none"/>
+  <text x="80" y="392" font-family="Arial, sans-serif" font-size="12" fill="#1e293b">Access control</text>
+  <text x="520" y="392" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Role-based access control implemented</text>
+  <rect x="700" y="377" width="45" height="20" rx="4" fill="#dcfce7"/>
+  <text x="710" y="391" font-family="Arial, sans-serif" font-size="10" fill="#166534">PASS</text>
+  
+  <rect x="40" y="410" width="720" height="35" rx="4" fill="#f8fafc"/>
+  <circle cx="60" cy="427" r="8" fill="#22c55e"/>
+  <path d="M56 427 L59 430 L65 424" stroke="white" stroke-width="2" fill="none"/>
+  <text x="80" y="432" font-family="Arial, sans-serif" font-size="12" fill="#1e293b">Session management</text>
+  <text x="520" y="432" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Secure session handling with timeout</text>
+  <rect x="700" y="417" width="45" height="20" rx="4" fill="#dcfce7"/>
+  <text x="710" y="431" font-family="Arial, sans-serif" font-size="10" fill="#166534">PASS</text>
+  
+  <!-- Footer -->
+  <text x="40" y="465" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">All 19 validation tests passed " Report generated: 2026-01-24</text>
+</svg>
