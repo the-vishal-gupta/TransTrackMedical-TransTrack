@@ -10,6 +10,11 @@ const { getDatabase } = require('../database/init');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const licenseManager = require('../license/manager');
+const riskEngine = require('../services/riskEngine');
+const accessControl = require('../services/accessControl');
+const disasterRecovery = require('../services/disasterRecovery');
+const complianceView = require('../services/complianceView');
+const offlineReconciliation = require('../services/offlineReconciliation');
 
 // Current session store
 let currentSession = null;
@@ -454,6 +459,129 @@ function setupIPCHandlers() {
       settings[row.key] = JSON.parse(row.value);
     }
     return settings;
+  });
+  
+  // ===== OPERATIONAL RISK INTELLIGENCE =====
+  ipcMain.handle('risk:getDashboard', async () => {
+    return await riskEngine.getRiskDashboard();
+  });
+  
+  ipcMain.handle('risk:getFullReport', async () => {
+    return await riskEngine.generateOperationalRiskReport();
+  });
+  
+  ipcMain.handle('risk:assessPatient', async (event, patientId) => {
+    const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId);
+    if (!patient) throw new Error('Patient not found');
+    return riskEngine.assessPatientOperationalRisk(patient);
+  });
+  
+  // ===== ACCESS CONTROL WITH JUSTIFICATION =====
+  ipcMain.handle('access:validateRequest', async (event, permission, justification) => {
+    if (!currentUser) throw new Error('Not authenticated');
+    return accessControl.validateAccessRequest(currentUser.role, permission, justification);
+  });
+  
+  ipcMain.handle('access:logJustifiedAccess', async (event, permission, entityType, entityId, justification) => {
+    if (!currentUser) throw new Error('Not authenticated');
+    return accessControl.logAccessWithJustification(
+      db, currentUser.id, currentUser.email, currentUser.role,
+      permission, entityType, entityId, justification
+    );
+  });
+  
+  ipcMain.handle('access:getRoles', async () => {
+    return accessControl.getAllRoles();
+  });
+  
+  ipcMain.handle('access:getJustificationReasons', async () => {
+    return accessControl.JUSTIFICATION_REASONS;
+  });
+  
+  // ===== DISASTER RECOVERY =====
+  ipcMain.handle('recovery:createBackup', async (event, options) => {
+    if (!currentUser) throw new Error('Not authenticated');
+    return await disasterRecovery.createBackup({
+      ...options,
+      createdBy: currentUser.email,
+    });
+  });
+  
+  ipcMain.handle('recovery:listBackups', async () => {
+    return disasterRecovery.listBackups();
+  });
+  
+  ipcMain.handle('recovery:verifyBackup', async (event, backupId) => {
+    return disasterRecovery.verifyBackup(backupId);
+  });
+  
+  ipcMain.handle('recovery:restoreBackup', async (event, backupId) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Admin access required for restore');
+    }
+    return await disasterRecovery.restoreFromBackup(backupId, {
+      restoredBy: currentUser.email,
+    });
+  });
+  
+  ipcMain.handle('recovery:getStatus', async () => {
+    return disasterRecovery.getRecoveryStatus();
+  });
+  
+  // ===== COMPLIANCE VIEW (READ-ONLY FOR REGULATORS) =====
+  ipcMain.handle('compliance:getSummary', async () => {
+    if (!currentUser) throw new Error('Not authenticated');
+    complianceView.logRegulatorAccess(db, currentUser.id, currentUser.email, 'view_summary', 'Viewed compliance summary');
+    return complianceView.getComplianceSummary();
+  });
+  
+  ipcMain.handle('compliance:getAuditTrail', async (event, options) => {
+    if (!currentUser) throw new Error('Not authenticated');
+    complianceView.logRegulatorAccess(db, currentUser.id, currentUser.email, 'view_audit', 'Viewed audit trail');
+    return complianceView.getAuditTrailForCompliance(options);
+  });
+  
+  ipcMain.handle('compliance:getDataCompleteness', async () => {
+    if (!currentUser) throw new Error('Not authenticated');
+    return complianceView.getDataCompletenessReport();
+  });
+  
+  ipcMain.handle('compliance:getValidationReport', async () => {
+    if (!currentUser) throw new Error('Not authenticated');
+    complianceView.logRegulatorAccess(db, currentUser.id, currentUser.email, 'view_validation', 'Viewed validation report');
+    return complianceView.generateValidationReport();
+  });
+  
+  ipcMain.handle('compliance:getAccessLogs', async (event, options) => {
+    if (!currentUser) throw new Error('Not authenticated');
+    return complianceView.getAccessLogReport(options);
+  });
+  
+  // ===== OFFLINE RECONCILIATION =====
+  ipcMain.handle('reconciliation:getStatus', async () => {
+    return offlineReconciliation.getReconciliationStatus();
+  });
+  
+  ipcMain.handle('reconciliation:getPendingChanges', async () => {
+    return offlineReconciliation.getPendingChanges();
+  });
+  
+  ipcMain.handle('reconciliation:reconcile', async (event, strategy) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+    return await offlineReconciliation.reconcilePendingChanges(strategy);
+  });
+  
+  ipcMain.handle('reconciliation:setMode', async (event, mode) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+    return offlineReconciliation.setOperationMode(mode);
+  });
+  
+  ipcMain.handle('reconciliation:getMode', async () => {
+    return offlineReconciliation.getOperationMode();
   });
   
   // ===== LICENSE MANAGEMENT =====

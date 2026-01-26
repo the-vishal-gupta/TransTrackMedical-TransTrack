@@ -59,6 +59,14 @@
 - Complete data sovereignty
 - Secure backup/restore capabilities
 
+### Enterprise Features (NEW)
+- **Operational Risk Intelligence** - Proactive risk detection for documentation delays, expiring evaluations, and status churn
+- **Role-Based Access with Audit Justification** - Users must document reasons for accessing sensitive data
+- **Disaster Recovery & Business Continuity** - Automated backups, verification, and one-click restore
+- **Read-Only Compliance View** - Dedicated view for regulators and auditors
+- **Offline Degradation with Reconciliation** - Graceful handling of offline scenarios with data sync
+- **Formal Validation Artifacts** - FDA 21 CFR Part 11 compliant validation documentation
+
 ---
 
 ## Screenshots

@@ -182,6 +182,49 @@ contextBridge.exposeInMainWorld('electronAPI', {
     isValid: () => ipcRenderer.invoke('license:isValid'),
   },
   
+  // Operational Risk Intelligence
+  risk: {
+    getDashboard: () => ipcRenderer.invoke('risk:getDashboard'),
+    getFullReport: () => ipcRenderer.invoke('risk:getFullReport'),
+    assessPatient: (patientId) => ipcRenderer.invoke('risk:assessPatient', patientId),
+  },
+  
+  // Access Control with Justification
+  accessControl: {
+    validateRequest: (permission, justification) => ipcRenderer.invoke('access:validateRequest', permission, justification),
+    logJustifiedAccess: (permission, entityType, entityId, justification) => 
+      ipcRenderer.invoke('access:logJustifiedAccess', permission, entityType, entityId, justification),
+    getRoles: () => ipcRenderer.invoke('access:getRoles'),
+    getJustificationReasons: () => ipcRenderer.invoke('access:getJustificationReasons'),
+  },
+  
+  // Disaster Recovery
+  recovery: {
+    createBackup: (options) => ipcRenderer.invoke('recovery:createBackup', options),
+    listBackups: () => ipcRenderer.invoke('recovery:listBackups'),
+    verifyBackup: (backupId) => ipcRenderer.invoke('recovery:verifyBackup', backupId),
+    restoreBackup: (backupId) => ipcRenderer.invoke('recovery:restoreBackup', backupId),
+    getStatus: () => ipcRenderer.invoke('recovery:getStatus'),
+  },
+  
+  // Compliance View
+  compliance: {
+    getSummary: () => ipcRenderer.invoke('compliance:getSummary'),
+    getAuditTrail: (options) => ipcRenderer.invoke('compliance:getAuditTrail', options),
+    getDataCompleteness: () => ipcRenderer.invoke('compliance:getDataCompleteness'),
+    getValidationReport: () => ipcRenderer.invoke('compliance:getValidationReport'),
+    getAccessLogs: (options) => ipcRenderer.invoke('compliance:getAccessLogs', options),
+  },
+  
+  // Offline Reconciliation
+  reconciliation: {
+    getStatus: () => ipcRenderer.invoke('reconciliation:getStatus'),
+    getPendingChanges: () => ipcRenderer.invoke('reconciliation:getPendingChanges'),
+    reconcile: (strategy) => ipcRenderer.invoke('reconciliation:reconcile', strategy),
+    setMode: (mode) => ipcRenderer.invoke('reconciliation:setMode', mode),
+    getMode: () => ipcRenderer.invoke('reconciliation:getMode'),
+  },
+  
   // Platform info
   platform: process.platform,
   isElectron: true

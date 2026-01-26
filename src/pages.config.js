@@ -7,6 +7,9 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PrioritySettings from './pages/PrioritySettings';
 import EHRIntegration from './pages/EHRIntegration';
+import RiskDashboard from './pages/RiskDashboard';
+import ComplianceCenter from './pages/ComplianceCenter';
+import DisasterRecovery from './pages/DisasterRecovery';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +23,9 @@ export const PAGES = {
     "Settings": Settings,
     "PrioritySettings": PrioritySettings,
     "EHRIntegration": EHRIntegration,
+    "RiskDashboard": RiskDashboard,
+    "ComplianceCenter": ComplianceCenter,
+    "DisasterRecovery": DisasterRecovery,
 }
 
 export const pagesConfig = {
