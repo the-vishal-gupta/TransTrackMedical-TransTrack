@@ -90,7 +90,7 @@ Visit our secure payment portal:
 ### Option 2: Purchase Order / Invoice
 For organizations requiring invoicing or purchase orders:
 
-📧 **NicMGildehaus83@outlook.com**
+📧 **Trans_Track@outlook.com**
 
 Include:
 - Organization name
@@ -101,7 +101,7 @@ Include:
 ### Option 3: Request a Demo
 Schedule a personalized demo before purchasing:
 
-📧 **NicMGildehaus83@outlook.com**
+📧 **Trans_Track@outlook.com**
 
 ---
 
@@ -116,14 +116,14 @@ Need custom features or integrations? Contact us for:
 - API access
 - Training programs
 
-📧 **NicMGildehaus83@outlook.com**
+📧 **Trans_Track@outlook.com**
 
 ---
 
 ## Frequently Asked Questions
 
 ### Is there a free trial?
-We offer a 14-day evaluation license for qualified healthcare organizations. Contact NicMGildehaus83@outlook.com.
+We offer a 14-day evaluation license for qualified healthcare organizations. Contact Trans_Track@outlook.com.
 
 ### What payment methods do you accept?
 - Credit/debit cards (Visa, Mastercard, Amex)
@@ -161,7 +161,7 @@ If TransTrack fails to meet documented compliance requirements, we'll fix it or 
 
 ## Contact Sales
 
-**Email**: NicMGildehaus83@outlook.com  
+**Email**: Trans_Track@outlook.com  
 **Response Time**: Within 24 business hours
 
 ---

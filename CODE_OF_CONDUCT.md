@@ -25,7 +25,7 @@ This Code of Conduct applies to all project spaces including GitHub issues, pull
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported to: NicMGildehaus83@outlook.com
+Instances of unacceptable behavior may be reported to: Trans_Track@outlook.com
 
 All complaints will be reviewed and investigated promptly and fairly.
 

@@ -298,13 +298,13 @@ TransTrack is commercial software requiring a paid license for use.
 - Academic institutions: 40% off
 - Multi-year commitments: Volume pricing
 
-📧 **NicMGildehaus83@outlook.com**
+📧 **Trans_Track@outlook.com**
 
 ### Request a Demo
 
 Interested in seeing TransTrack in action? Schedule a personalized demo:
 
-📧 **NicMGildehaus83@outlook.com**
+📧 **Trans_Track@outlook.com**
 
 ### 14-Day Evaluation
 
@@ -315,18 +315,18 @@ Qualified healthcare organizations can request a free 14-day evaluation license.
 ## Support
 
 ### Sales & Licensing
-📧 NicMGildehaus83@outlook.com
+📧 Trans_Track@outlook.com
 
 ### Technical Support (Licensed Customers)
-📧 NicMGildehaus83@outlook.com
+📧 Trans_Track@outlook.com
 
 ### Enterprise Solutions
 Custom integrations, training, and dedicated support:
-📧 NicMGildehaus83@outlook.com
+📧 Trans_Track@outlook.com
 
 ### Pre-Sales Questions
 - [GitHub Discussions](../../discussions)
-- [Request a Demo](mailto:NicMGildehaus83@outlook.com)
+- [Request a Demo](mailto:Trans_Track@outlook.com)
 
 ---
 

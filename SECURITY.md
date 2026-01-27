@@ -12,7 +12,7 @@ We take security seriously, especially given the healthcare context of TransTrac
 
 **To report a security issue:**
 
-Email: NicMGildehaus83@outlook.com
+Email: Trans_Track@outlook.com
 
 **Please include:**
 - Description of the issue

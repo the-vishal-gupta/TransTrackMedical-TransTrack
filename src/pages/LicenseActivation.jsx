@@ -220,7 +220,7 @@ export default function LicenseActivation({ onActivated }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open('mailto:NicMGildehaus83@outlook.com?subject=TransTrack%20License%20Purchase', '_blank')}
+                  onClick={() => window.open('mailto:Trans_Track@outlook.com?subject=TransTrack%20License%20Purchase', '_blank')}
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Purchase License
@@ -228,7 +228,7 @@ export default function LicenseActivation({ onActivated }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open('mailto:NicMGildehaus83@outlook.com?subject=TransTrack%20Inquiry', '_blank')}
+                  onClick={() => window.open('mailto:Trans_Track@outlook.com?subject=TransTrack%20Inquiry', '_blank')}
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Contact Sales

@@ -17,8 +17,8 @@ dummyPublicKeyForDemonstrationPurposesOnly1234567890ABCDEFGH
 IJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 -----END PUBLIC KEY-----`,
   evaluationDays: 14,
-  contactEmail: 'NicMGildehaus83@outlook.com',
-  purchaseUrl: 'mailto:NicMGildehaus83@outlook.com?subject=TransTrack%20License%20Purchase',
+  contactEmail: 'Trans_Track@outlook.com',
+  purchaseUrl: 'mailto:Trans_Track@outlook.com?subject=TransTrack%20License%20Purchase',
 };
 
 // License types
