@@ -4,13 +4,28 @@
       <stop offset="0%" style="stop-color:#f8fafc"/>
       <stop offset="100%" style="stop-color:#e2e8f0"/>
     </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7"/>
+      <stop offset="100%" style="stop-color:#0288D1"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#AED581"/>
+      <stop offset="100%" style="stop-color:#7CB342"/>
+    </linearGradient>
   </defs>
   <rect width="250" height="150" fill="url(#bg)" rx="8"/>
-  <rect x="0" y="0" width="250" height="20" fill="#ffffff"/>
-  <rect x="8" y="5" width="10" height="10" rx="2" fill="#0891b2"/>
+  <rect x="0" y="0" width="250" height="20" fill="#0a0a0a" rx="8 8 0 0"/>
+  
+  <!-- Mini Logo -->
+  <g transform="translate(5, 3)">
+    <path d="M7 12 C4 9 2 7 2 5 C2 3 4 2 5.5 2 C6.5 2 7 3 7 3" 
+          fill="none" stroke="url(#blueGrad)" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M7 12 C10 9 12 7 12 5 C12 3 10 2 8.5 2 C7.5 2 7 3 7 3" 
+          fill="none" stroke="url(#greenGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
   
   <!-- Patient header -->
-  <circle cx="35" cy="45" r="15" fill="#0891b2"/>
+  <circle cx="35" cy="45" r="15" fill="#0288D1"/>
   <text x="60" y="42" font-family="Arial" font-size="10" font-weight="bold" fill="#0f172a">John Smith</text>
   <text x="60" y="54" font-family="Arial" font-size="8" fill="#64748b">PT-2024-001</text>
   
@@ -26,7 +41,7 @@
   <text x="130" y="88" font-family="Arial" font-size="8" fill="#64748b">Organ:</text>
   <text x="165" y="88" font-family="Arial" font-size="8" fill="#0f172a">Kidney</text>
   <text x="20" y="105" font-family="Arial" font-size="8" fill="#64748b">Status:</text>
-  <text x="55" y="105" font-family="Arial" font-size="8" fill="#16a34a">Active</text>
+  <text x="55" y="105" font-family="Arial" font-size="8" fill="#7CB342">Active</text>
   <text x="130" y="105" font-family="Arial" font-size="8" fill="#64748b">Days:</text>
   <text x="160" y="105" font-family="Arial" font-size="8" fill="#0f172a">245</text>
   <text x="20" y="122" font-family="Arial" font-size="8" fill="#64748b">Urgency:</text>

@@ -1,18 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0891b2;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0e7490;stop-opacity:1" />
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#AED581;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7CB342;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="100" fill="url(#gradient)"/>
-  <g transform="translate(256, 256)">
-    <!-- Heart/Medical Cross Symbol -->
-    <path d="M0 -120 L50 -70 L50 -30 L90 -30 L90 30 L50 30 L50 70 L-50 70 L-50 30 L-90 30 L-90 -30 L-50 -30 L-50 -70 Z" 
-          fill="white" opacity="0.9"/>
-    <!-- Circular Arrow (Transfer/Track) -->
-    <circle cx="0" cy="0" r="130" fill="none" stroke="white" stroke-width="20" 
-            stroke-dasharray="400 200" opacity="0.6"/>
-    <polygon points="100,-80 130,-50 100,-20" fill="white" opacity="0.6"/>
-  </g>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#0a0a0a"/>
+  
+  <!-- Heart shape - Left side (Blue) -->
+  <path d="M256 420 C150 320 80 250 80 180 C80 120 130 80 190 80 C230 80 256 110 256 110" 
+        fill="none" stroke="url(#blueGradient)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M256 380 C180 300 130 250 130 200 C130 160 160 130 200 130 C230 130 256 155 256 155" 
+        fill="none" stroke="url(#blueGradient)" stroke-width="20" stroke-linecap="round" opacity="0.8"/>
+  <path d="M256 340 C200 280 170 250 170 215 C170 190 190 170 215 170 C240 170 256 195 256 195" 
+        fill="none" stroke="url(#blueGradient)" stroke-width="14" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Heart shape - Right side (Green) -->
+  <path d="M256 420 C362 320 432 250 432 180 C432 120 382 80 322 80 C282 80 256 110 256 110" 
+        fill="none" stroke="url(#greenGradient)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M256 380 C332 300 382 250 382 200 C382 160 352 130 312 130 C282 130 256 155 256 155" 
+        fill="none" stroke="url(#greenGradient)" stroke-width="20" stroke-linecap="round" opacity="0.8"/>
+  <path d="M256 340 C312 280 342 250 342 215 C342 190 322 170 297 170 C272 170 256 195 256 195" 
+        fill="none" stroke="url(#greenGradient)" stroke-width="14" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Circuit dots -->
+  <circle cx="100" cy="140" r="8" fill="#4FC3F7"/>
+  <circle cx="140" cy="100" r="6" fill="#4FC3F7"/>
+  <circle cx="412" cy="140" r="8" fill="#AED581"/>
+  <circle cx="372" cy="100" r="6" fill="#AED581"/>
+  <circle cx="256" cy="130" r="5" fill="#4FC3F7"/>
 </svg>

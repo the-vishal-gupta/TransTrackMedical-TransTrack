@@ -4,16 +4,33 @@
       <stop offset="0%" style="stop-color:#f8fafc"/>
       <stop offset="100%" style="stop-color:#e2e8f0"/>
     </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FC3F7"/>
+      <stop offset="100%" style="stop-color:#0288D1"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#AED581"/>
+      <stop offset="100%" style="stop-color:#7CB342"/>
+    </linearGradient>
   </defs>
   
   <!-- Background -->
   <rect width="800" height="500" fill="url(#bgGrad4)"/>
   
   <!-- Header -->
-  <rect x="0" y="0" width="800" height="60" fill="#0891b2"/>
-  <text x="70" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">Donor-Recipient Matching</text>
-  <circle cx="40" cy="30" r="15" fill="#ec4899"/>
-  <path d="M40 22 C35 22 32 26 32 30 C32 38 40 42 40 42 C40 42 48 38 48 30 C48 26 45 22 40 22" fill="white"/>
+  <rect x="0" y="0" width="800" height="60" fill="#0a0a0a"/>
+  
+  <!-- Logo - Heart Icon -->
+  <g transform="translate(20, 8)">
+    <path d="M22 38 C14 30 8 24 8 18 C8 13 12 9 17 9 C20 9 22 11 22 11" 
+          fill="none" stroke="url(#blueGrad)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M22 38 C30 30 36 24 36 18 C36 13 32 9 27 9 C24 9 22 11 22 11" 
+          fill="none" stroke="url(#greenGrad)" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <text x="70" y="32" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#4FC3F7">Trans</text>
+  <text x="115" y="32" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#AED581">Track</text>
+  <text x="170" y="32" font-family="Arial, sans-serif" font-size="18" fill="#ffffff"> - Donor-Recipient Matching</text>
   
   <!-- Donor Card -->
   <rect x="20" y="80" width="350" height="180" rx="8" fill="white" stroke="#e2e8f0"/>
@@ -36,7 +53,7 @@
   
   <text x="40" y="240" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Quality Score</text>
   <rect x="150" y="227" width="100" height="8" rx="4" fill="#e2e8f0"/>
-  <rect x="150" y="227" width="85" height="8" rx="4" fill="#22c55e"/>
+  <rect x="150" y="227" width="85" height="8" rx="4" fill="#7CB342"/>
   <text x="260" y="238" font-family="Arial, sans-serif" font-size="10" fill="#166534">85%</text>
   
   <!-- Match Results -->
@@ -47,46 +64,46 @@
   <!-- Match 1 -->
   <rect x="410" y="145" width="350" height="70" rx="4" fill="#f0fdf4" stroke="#86efac"/>
   <text x="430" y="170" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">Sarah Williams</text>
-  <text x="430" y="188" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0042 " Blood: O+ " Wait: 847 days</text>
+  <text x="430" y="188" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0042 · Blood: O+ · Wait: 847 days</text>
   <text x="430" y="205" font-family="Arial, sans-serif" font-size="10" fill="#64748b">HLA: A2, B44, DR4, DQ7</text>
-  <rect x="680" y="155" width="60" height="24" rx="4" fill="#22c55e"/>
+  <rect x="680" y="155" width="60" height="24" rx="4" fill="#7CB342"/>
   <text x="695" y="171" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">98%</text>
   <text x="685" y="205" font-family="Arial, sans-serif" font-size="9" fill="#166534">Best Match</text>
   
   <!-- Match 2 -->
   <rect x="410" y="225" width="350" height="70" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
   <text x="430" y="250" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">Michael Chen</text>
-  <text x="430" y="268" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0156 " Blood: O- " Wait: 612 days</text>
+  <text x="430" y="268" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0156 · Blood: O- · Wait: 612 days</text>
   <text x="430" y="285" font-family="Arial, sans-serif" font-size="10" fill="#64748b">HLA: A2, B35, DR4, DQ8</text>
-  <rect x="680" y="235" width="60" height="24" rx="4" fill="#0891b2"/>
+  <rect x="680" y="235" width="60" height="24" rx="4" fill="#0288D1"/>
   <text x="695" y="251" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">91%</text>
   
   <!-- Match 3 -->
   <rect x="410" y="305" width="350" height="70" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
   <text x="430" y="330" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">Emily Rodriguez</text>
-  <text x="430" y="348" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0203 " Blood: O+ " Wait: 423 days</text>
+  <text x="430" y="348" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0203 · Blood: O+ · Wait: 423 days</text>
   <text x="430" y="365" font-family="Arial, sans-serif" font-size="10" fill="#64748b">HLA: A3, B44, DR7, DQ8</text>
-  <rect x="680" y="315" width="60" height="24" rx="4" fill="#0891b2"/>
+  <rect x="680" y="315" width="60" height="24" rx="4" fill="#0288D1"/>
   <text x="695" y="331" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">84%</text>
   
   <!-- Match 4 -->
   <rect x="410" y="385" width="350" height="70" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
   <text x="430" y="410" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">David Kim</text>
-  <text x="430" y="428" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0089 " Blood: O+ " Wait: 289 days</text>
+  <text x="430" y="428" font-family="Arial, sans-serif" font-size="10" fill="#64748b">PT-2024-0089 · Blood: O+ · Wait: 289 days</text>
   <text x="430" y="445" font-family="Arial, sans-serif" font-size="10" fill="#64748b">HLA: A2, B27, DR11, DQ6</text>
   <rect x="680" y="395" width="60" height="24" rx="4" fill="#64748b"/>
   <text x="695" y="411" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">72%</text>
   
   <!-- Run Matching Button -->
-  <rect x="20" y="280" width="350" height="45" rx="8" fill="#0891b2"/>
+  <rect x="20" y="280" width="350" height="45" rx="8" fill="#0288D1"/>
   <text x="130" y="308" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">Run Advanced Matching</text>
   
   <!-- Algorithm Info -->
   <rect x="20" y="345" width="350" height="135" rx="8" fill="white" stroke="#e2e8f0"/>
   <text x="40" y="375" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e293b">Matching Algorithm</text>
-  <text x="40" y="400" font-family="Arial, sans-serif" font-size="10" fill="#64748b">" HLA Compatibility (40%)</text>
-  <text x="40" y="418" font-family="Arial, sans-serif" font-size="10" fill="#64748b">" Blood Type Match (25%)</text>
-  <text x="40" y="436" font-family="Arial, sans-serif" font-size="10" fill="#64748b">" Wait Time (20%)</text>
-  <text x="40" y="454" font-family="Arial, sans-serif" font-size="10" fill="#64748b">" Medical Urgency (15%)</text>
+  <text x="40" y="400" font-family="Arial, sans-serif" font-size="10" fill="#64748b">• HLA Compatibility (40%)</text>
+  <text x="40" y="418" font-family="Arial, sans-serif" font-size="10" fill="#64748b">• Blood Type Match (25%)</text>
+  <text x="40" y="436" font-family="Arial, sans-serif" font-size="10" fill="#64748b">• Wait Time (20%)</text>
+  <text x="40" y="454" font-family="Arial, sans-serif" font-size="10" fill="#64748b">• Medical Urgency (15%)</text>
   <text x="40" y="472" font-family="Arial, sans-serif" font-size="9" fill="#94a3b8">UNOS/OPTN Compliant Algorithm</text>
 </svg>
