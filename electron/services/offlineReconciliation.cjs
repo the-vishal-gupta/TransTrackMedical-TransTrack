@@ -5,7 +5,7 @@
  * when connectivity is restored or systems are merged.
  */
 
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');

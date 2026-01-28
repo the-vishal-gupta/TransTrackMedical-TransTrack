@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { app } = require('electron');
-const { getDatabase, getDatabasePath } = require('../database/init');
+const { getDatabase, getDatabasePath } = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 
 // Recovery configuration

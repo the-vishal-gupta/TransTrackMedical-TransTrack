@@ -5,7 +5,7 @@
  * justification for sensitive data access.
  */
 
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 
 // Permission definitions

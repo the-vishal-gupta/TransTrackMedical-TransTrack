@@ -12,7 +12,7 @@
  * - Fragile coordination handoffs
  */
 
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init.cjs');
 
 // Risk thresholds (configurable)
 const RISK_THRESHOLDS = {

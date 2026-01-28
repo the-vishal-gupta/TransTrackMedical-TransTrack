@@ -12,8 +12,8 @@
 
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
-const { initDatabase, closeDatabase } = require('./database/init');
-const { setupIPCHandlers } = require('./ipc/handlers');
+const { initDatabase, closeDatabase } = require('./database/init.cjs');
+const { setupIPCHandlers } = require('./ipc/handlers.cjs');
 
 // Disable hardware acceleration for better compatibility
 app.disableHardwareAcceleration();
@@ -24,8 +24,8 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 let mainWindow = null;
 let splashWindow = null;
 
-// Production check
-const isDev = process.env.NODE_ENV === 'development';
+// Production check - detect dev mode by checking if app is packaged or if ELECTRON_DEV is set
+const isDev = !app.isPackaged || process.env.NODE_ENV === 'development' || process.env.ELECTRON_DEV === '1';
 
 // Application metadata
 const APP_INFO = {
@@ -65,7 +65,7 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       // Security settings
       webSecurity: true,
       allowRunningInsecureContent: false,

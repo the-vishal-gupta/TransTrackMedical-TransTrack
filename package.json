@@ -37,7 +37,7 @@
     "offline-first",
     "encrypted-database"
   ],
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",

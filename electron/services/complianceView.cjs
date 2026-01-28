@@ -5,7 +5,7 @@
  * regulatory auditors and compliance officers.
  */
 
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 
 /**

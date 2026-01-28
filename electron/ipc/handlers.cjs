@@ -6,15 +6,15 @@
  */
 
 const { ipcMain, dialog } = require('electron');
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
-const licenseManager = require('../license/manager');
-const riskEngine = require('../services/riskEngine');
-const accessControl = require('../services/accessControl');
-const disasterRecovery = require('../services/disasterRecovery');
-const complianceView = require('../services/complianceView');
-const offlineReconciliation = require('../services/offlineReconciliation');
+const licenseManager = require('../license/manager.cjs');
+const riskEngine = require('../services/riskEngine.cjs');
+const accessControl = require('../services/accessControl.cjs');
+const disasterRecovery = require('../services/disasterRecovery.cjs');
+const complianceView = require('../services/complianceView.cjs');
+const offlineReconciliation = require('../services/offlineReconciliation.cjs');
 
 // Current session store
 let currentSession = null;
@@ -427,7 +427,7 @@ function setupIPCHandlers() {
   ipcMain.handle('function:invoke', async (event, functionName, params) => {
     if (!currentUser) throw new Error('Not authenticated');
     
-    const functions = require('../functions');
+    const functions = require('../functions/index.cjs');
     
     if (!functions[functionName]) {
       throw new Error(`Unknown function: ${functionName}`);
@@ -630,7 +630,7 @@ function setupIPCHandlers() {
   });
   
   ipcMain.handle('file:backupDatabase', async (event, targetPath) => {
-    const { backupDatabase } = require('../database/init');
+    const { backupDatabase } = require('../database/init.cjs');
     await backupDatabase(targetPath);
     return { success: true };
   });
