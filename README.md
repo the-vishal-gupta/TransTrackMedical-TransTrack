@@ -61,10 +61,11 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 - **Expiring Evaluations** - Surface candidates with evaluations approaching expiration
 - **Documentation Gaps** - Identify missing or stale documentation before it causes problems
 - **Status Churn Detection** - Track candidates with frequent status changes that may indicate workflow issues
+- **Readiness Barriers** - Track non-clinical operational barriers (insurance, transportation, caregiver support, etc.)
 - **Readiness Tracking** - Operational indicators for internal workflow visibility
 
 <p align="center">
-  <img src="docs/images/risk-dashboard.svg" alt="Risk Intelligence Dashboard" width="700">
+  <img src="docs/images/barriers-dashboard.png" alt="Risk Intelligence Dashboard with Readiness Barriers" width="700">
 </p>
 
 ---
@@ -91,6 +92,15 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 - Internal urgency indicators for workflow prioritization
 
 > **Note**: These indicators are for internal operational visibility only and do not perform or replace official allocation calculations.
+
+### Readiness Barriers (Non-Clinical)
+- **Structured barrier tracking** - Pending tests, insurance clearance, transportation, caregiver support, housing, financial clearance
+- **Risk-level assignment** - Low, Moderate, High operational risk indicators
+- **Team assignment** - Assign barriers to Social Work, Financial, Coordinator, or Other teams
+- **Resolution tracking** - Target dates, status updates, and audit history
+- **Dashboard integration** - Barriers integrated into Operational Risk Intelligence
+
+> **Important**: Readiness Barriers are strictly NON-CLINICAL, NON-ALLOCATIVE, and designed for operational workflow visibility only. They do NOT affect allocation decisions or replace UNOS/OPTN systems.
 
 ### EHR Integration
 - **FHIR R4** data import/export
@@ -135,6 +145,16 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 ### Donor-Recipient Matching
 <p align="center">
   <img src="docs/images/donor-matching.svg" alt="Donor Matching" width="700">
+</p>
+
+### Readiness Barriers (Non-Clinical Tracking)
+<p align="center">
+  <img src="docs/images/readiness-barriers.png" alt="Readiness Barriers" width="700">
+</p>
+
+### Operational Risk Dashboard with Barriers
+<p align="center">
+  <img src="docs/images/barriers-dashboard.png" alt="Barriers Dashboard" width="700">
 </p>
 
 ### Compliance Center
