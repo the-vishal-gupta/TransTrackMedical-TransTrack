@@ -13,12 +13,21 @@
  */
 
 const { ipcMain, dialog } = require('electron');
-const { getDatabase, isEncryptionEnabled, verifyDatabaseIntegrity, getEncryptionStatus } = require('../database/init.cjs');
+const { 
+  getDatabase, 
+  isEncryptionEnabled, 
+  verifyDatabaseIntegrity, 
+  getEncryptionStatus,
+  getDefaultOrganization,
+  getOrgLicense,
+  getPatientCount,
+  getUserCount 
+} = require('../database/init.cjs');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const licenseManager = require('../license/manager.cjs');
 const featureGate = require('../license/featureGate.cjs');
-const { FEATURES, LICENSE_TIER } = require('../license/tiers.cjs');
+const { FEATURES, LICENSE_TIER, LICENSE_FEATURES, hasFeature, checkDataLimit } = require('../license/tiers.cjs');
 const riskEngine = require('../services/riskEngine.cjs');
 const accessControl = require('../services/accessControl.cjs');
 const disasterRecovery = require('../services/disasterRecovery.cjs');
@@ -27,10 +36,61 @@ const offlineReconciliation = require('../services/offlineReconciliation.cjs');
 const readinessBarriers = require('../services/readinessBarriers.cjs');
 const ahhqService = require('../services/ahhqService.cjs');
 
-// Current session store
+// =============================================================================
+// SESSION STORE (Includes org_id for hard org isolation)
+// =============================================================================
+// CRITICAL: Session stores org_id. All downstream operations REQUIRE org_id.
+// Never accept org_id from the client. Always use session.org_id.
+
 let currentSession = null;
 let currentUser = null;
 let sessionExpiry = null;
+
+/**
+ * Get current org_id from session
+ * FAILS CLOSED if org_id is missing - never returns null/undefined
+ * @returns {string} The organization ID
+ * @throws {Error} If no org_id in session
+ */
+function getSessionOrgId() {
+  if (!currentUser || !currentUser.org_id) {
+    throw new Error('Organization context required. Please log in again.');
+  }
+  return currentUser.org_id;
+}
+
+/**
+ * Get current user's license tier
+ * @returns {string} The license tier
+ */
+function getSessionTier() {
+  if (!currentUser || !currentUser.license_tier) {
+    return LICENSE_TIER.EVALUATION;
+  }
+  return currentUser.license_tier;
+}
+
+/**
+ * Check if current session has a specific feature enabled
+ * @param {string} featureName - The feature to check
+ * @returns {boolean}
+ */
+function sessionHasFeature(featureName) {
+  const tier = getSessionTier();
+  return hasFeature(tier, featureName);
+}
+
+/**
+ * Require a feature, throw if not enabled
+ * @param {string} featureName - The feature to require
+ * @throws {Error} If feature not enabled
+ */
+function requireFeature(featureName) {
+  if (!sessionHasFeature(featureName)) {
+    const tier = getSessionTier();
+    throw new Error(`Feature '${featureName}' is not available in your ${tier} tier. Please upgrade to access this feature.`);
+  }
+}
 
 // Failed login tracking for account lockout
 const failedLoginAttempts = new Map(); // email -> { count, lastAttempt, lockedUntil }
@@ -39,21 +99,25 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours (reduced from 24 for security)
 
 // Allowed columns for ORDER BY to prevent SQL injection
+// Note: org_id is NOT included as it should never be used for sorting (it's always filtered, not sorted)
 const ALLOWED_ORDER_COLUMNS = {
-  patients: ['id', 'patient_id', 'first_name', 'last_name', 'blood_type', 'organ_needed', 'medical_urgency', 'waitlist_status', 'priority_score', 'created_date', 'updated_date'],
-  donor_organs: ['id', 'donor_id', 'organ_type', 'blood_type', 'organ_status', 'status', 'created_date', 'updated_date'],
-  matches: ['id', 'compatibility_score', 'match_status', 'priority_rank', 'created_date', 'updated_date'],
-  notifications: ['id', 'title', 'notification_type', 'is_read', 'priority_level', 'created_date'],
-  notification_rules: ['id', 'rule_name', 'trigger_event', 'priority_level', 'is_active', 'created_date'],
-  priority_weights: ['id', 'name', 'is_active', 'created_date', 'updated_date'],
-  ehr_integrations: ['id', 'name', 'type', 'is_active', 'last_sync_date', 'created_date'],
-  ehr_imports: ['id', 'import_type', 'status', 'created_date', 'completed_date'],
-  ehr_sync_logs: ['id', 'sync_type', 'direction', 'status', 'created_date'],
-  ehr_validation_rules: ['id', 'field_name', 'rule_type', 'is_active', 'created_date'],
-  audit_logs: ['id', 'action', 'entity_type', 'user_email', 'created_date'],
-  users: ['id', 'email', 'full_name', 'role', 'is_active', 'created_date', 'last_login'],
+  patients: ['id', 'patient_id', 'first_name', 'last_name', 'blood_type', 'organ_needed', 'medical_urgency', 'waitlist_status', 'priority_score', 'created_at', 'updated_at', 'created_date', 'updated_date'],
+  donor_organs: ['id', 'donor_id', 'organ_type', 'blood_type', 'organ_status', 'status', 'created_at', 'updated_at', 'created_date', 'updated_date'],
+  matches: ['id', 'compatibility_score', 'match_status', 'priority_rank', 'created_at', 'updated_at', 'created_date', 'updated_date'],
+  notifications: ['id', 'title', 'notification_type', 'is_read', 'priority_level', 'created_at', 'created_date'],
+  notification_rules: ['id', 'rule_name', 'trigger_event', 'priority_level', 'is_active', 'created_at', 'created_date'],
+  priority_weights: ['id', 'name', 'is_active', 'created_at', 'updated_at', 'created_date', 'updated_date'],
+  ehr_integrations: ['id', 'name', 'type', 'is_active', 'last_sync_date', 'created_at', 'created_date'],
+  ehr_imports: ['id', 'import_type', 'status', 'created_at', 'completed_date', 'created_date'],
+  ehr_sync_logs: ['id', 'sync_type', 'direction', 'status', 'created_at', 'created_date'],
+  ehr_validation_rules: ['id', 'field_name', 'rule_type', 'is_active', 'created_at', 'created_date'],
+  audit_logs: ['id', 'action', 'entity_type', 'user_email', 'created_at', 'created_date'],
+  users: ['id', 'email', 'full_name', 'role', 'is_active', 'created_at', 'last_login', 'created_date'],
   readiness_barriers: ['id', 'patient_id', 'barrier_type', 'status', 'risk_level', 'created_at', 'updated_at'],
   adult_health_history_questionnaires: ['id', 'patient_id', 'status', 'expiration_date', 'created_at', 'updated_at'],
+  organizations: ['id', 'name', 'type', 'status', 'created_at', 'updated_at'],
+  licenses: ['id', 'tier', 'activated_at', 'license_expires_at', 'created_at'],
+  settings: ['id', 'key', 'updated_at'],
 };
 
 // Password strength requirements
@@ -143,6 +207,7 @@ function clearFailedLogins(email) {
 
 /**
  * Validate session is still active and not expired
+ * Also validates that org_id is present in session
  * @returns {boolean}
  */
 function validateSession() {
@@ -152,6 +217,14 @@ function validateSession() {
   
   if (Date.now() > sessionExpiry) {
     // Session expired - clear it
+    currentSession = null;
+    currentUser = null;
+    sessionExpiry = null;
+    return false;
+  }
+  
+  // Validate org_id is present (fail closed)
+  if (!currentUser.org_id) {
     currentSession = null;
     currentUser = null;
     sessionExpiry = null;
@@ -230,6 +303,219 @@ function setupIPCHandlers() {
     return isEncryptionEnabled();
   });
   
+  // ===== ORGANIZATION MANAGEMENT =====
+  
+  ipcMain.handle('organization:getCurrent', async () => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    
+    const orgId = getSessionOrgId();
+    const org = db.prepare('SELECT * FROM organizations WHERE id = ?').get(orgId);
+    
+    if (!org) {
+      throw new Error('Organization not found');
+    }
+    
+    // Get license info
+    const license = getOrgLicense(orgId);
+    
+    // Get counts for limits display
+    const patientCount = getPatientCount(orgId);
+    const userCount = getUserCount(orgId);
+    
+    return {
+      ...org,
+      license: license ? {
+        tier: license.tier,
+        maxPatients: license.max_patients,
+        maxUsers: license.max_users,
+        expiresAt: license.license_expires_at,
+        maintenanceExpiresAt: license.maintenance_expires_at,
+      } : null,
+      usage: {
+        patients: patientCount,
+        users: userCount,
+      },
+    };
+  });
+  
+  ipcMain.handle('organization:update', async (event, updates) => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    if (currentUser.role !== 'admin') throw new Error('Admin access required');
+    
+    const orgId = getSessionOrgId();
+    const now = new Date().toISOString();
+    
+    // Only allow updating certain fields
+    const allowedFields = ['name', 'address', 'phone', 'email', 'settings'];
+    const safeUpdates = {};
+    
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        safeUpdates[field] = updates[field];
+      }
+    }
+    
+    if (Object.keys(safeUpdates).length === 0) {
+      throw new Error('No valid fields to update');
+    }
+    
+    // Handle settings as JSON
+    if (safeUpdates.settings && typeof safeUpdates.settings === 'object') {
+      safeUpdates.settings = JSON.stringify(safeUpdates.settings);
+    }
+    
+    const setClause = Object.keys(safeUpdates).map(k => `${k} = ?`).join(', ');
+    const values = [...Object.values(safeUpdates), now, orgId];
+    
+    db.prepare(`UPDATE organizations SET ${setClause}, updated_at = ? WHERE id = ?`).run(...values);
+    
+    logAudit('update', 'Organization', orgId, null, 'Organization settings updated', currentUser.email, currentUser.role);
+    
+    return { success: true };
+  });
+  
+  // ===== LICENSE MANAGEMENT =====
+  
+  ipcMain.handle('license:getInfo', async () => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    
+    const orgId = getSessionOrgId();
+    const license = getOrgLicense(orgId);
+    const tier = license?.tier || LICENSE_TIER.EVALUATION;
+    const features = LICENSE_FEATURES[tier] || LICENSE_FEATURES[LICENSE_TIER.EVALUATION];
+    
+    return {
+      tier: tier,
+      features: features,
+      license: license,
+      usage: {
+        patients: getPatientCount(orgId),
+        users: getUserCount(orgId),
+      },
+      limits: {
+        maxPatients: features.maxPatients,
+        maxUsers: features.maxUsers,
+      },
+    };
+  });
+  
+  ipcMain.handle('license:activate', async (event, licenseKey, customerInfo) => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    if (currentUser.role !== 'admin') throw new Error('Admin access required');
+    
+    const orgId = getSessionOrgId();
+    
+    // Check build type - evaluation builds cannot activate licenses
+    const { isEvaluationBuild } = require('../license/tiers.cjs');
+    if (isEvaluationBuild()) {
+      throw new Error('Cannot activate license on Evaluation build. Please download the Enterprise version.');
+    }
+    
+    // Activate using license manager
+    const result = await licenseManager.activateLicense(licenseKey, {
+      ...customerInfo,
+      orgId: orgId,
+    });
+    
+    if (result.success) {
+      // Update license in database
+      const now = new Date().toISOString();
+      const existingLicense = getOrgLicense(orgId);
+      
+      if (existingLicense) {
+        db.prepare(`
+          UPDATE licenses SET 
+            license_key = ?, tier = ?, activated_at = ?, maintenance_expires_at = ?,
+            customer_name = ?, customer_email = ?, updated_at = ?
+          WHERE org_id = ?
+        `).run(
+          licenseKey, result.tier, now, result.maintenanceExpiry,
+          customerInfo?.name || '', customerInfo?.email || '', now, orgId
+        );
+      } else {
+        db.prepare(`
+          INSERT INTO licenses (id, org_id, license_key, tier, activated_at, maintenance_expires_at, customer_name, customer_email, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          uuidv4(), orgId, licenseKey, result.tier, now, result.maintenanceExpiry,
+          customerInfo?.name || '', customerInfo?.email || '', now, now
+        );
+      }
+      
+      logAudit('license_activated', 'License', orgId, null, `License activated: ${result.tier}`, currentUser.email, currentUser.role);
+    }
+    
+    return result;
+  });
+  
+  ipcMain.handle('license:checkFeature', async (event, featureName) => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    
+    return {
+      enabled: sessionHasFeature(featureName),
+      tier: getSessionTier(),
+    };
+  });
+  
+  // ===== SETTINGS (Org-Scoped) =====
+  
+  ipcMain.handle('settings:get', async (event, key) => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    
+    const orgId = getSessionOrgId();
+    const setting = db.prepare('SELECT value FROM settings WHERE org_id = ? AND key = ?').get(orgId, key);
+    
+    if (!setting) return null;
+    
+    try {
+      return JSON.parse(setting.value);
+    } catch {
+      return setting.value;
+    }
+  });
+  
+  ipcMain.handle('settings:set', async (event, key, value) => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    if (currentUser.role !== 'admin') throw new Error('Admin access required');
+    
+    const orgId = getSessionOrgId();
+    const now = new Date().toISOString();
+    const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    
+    // Upsert the setting
+    const existing = db.prepare('SELECT id FROM settings WHERE org_id = ? AND key = ?').get(orgId, key);
+    
+    if (existing) {
+      db.prepare('UPDATE settings SET value = ?, updated_at = ? WHERE id = ?').run(valueStr, now, existing.id);
+    } else {
+      db.prepare('INSERT INTO settings (id, org_id, key, value, updated_at) VALUES (?, ?, ?, ?, ?)').run(
+        uuidv4(), orgId, key, valueStr, now
+      );
+    }
+    
+    logAudit('settings_update', 'Settings', key, null, `Setting '${key}' updated`, currentUser.email, currentUser.role);
+    
+    return { success: true };
+  });
+  
+  ipcMain.handle('settings:getAll', async () => {
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    
+    const orgId = getSessionOrgId();
+    const settings = db.prepare('SELECT key, value FROM settings WHERE org_id = ?').all(orgId);
+    
+    const result = {};
+    for (const setting of settings) {
+      try {
+        result[setting.key] = JSON.parse(setting.value);
+      } catch {
+        result[setting.key] = setting.value;
+      }
+    }
+    
+    return result;
+  });
+  
   // ===== AUTHENTICATION =====
   ipcMain.handle('auth:login', async (event, { email, password }) => {
     try {
@@ -240,6 +526,7 @@ function setupIPCHandlers() {
         throw new Error(`Account temporarily locked due to too many failed attempts. Try again in ${lockoutStatus.remainingTime} minutes.`);
       }
       
+      // Find user by email (email is unique per org, but we allow login with just email)
       const user = db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email);
       
       if (!user) {
@@ -255,30 +542,56 @@ function setupIPCHandlers() {
         throw new Error('Invalid credentials');
       }
       
+      // CRITICAL: Get user's organization
+      if (!user.org_id) {
+        // Legacy user without org - assign to default organization
+        const defaultOrg = getDefaultOrganization();
+        if (defaultOrg) {
+          db.prepare('UPDATE users SET org_id = ? WHERE id = ?').run(defaultOrg.id, user.id);
+          user.org_id = defaultOrg.id;
+        } else {
+          throw new Error('No organization configured. Please contact administrator.');
+        }
+      }
+      
+      // Get organization info
+      const org = db.prepare('SELECT * FROM organizations WHERE id = ?').get(user.org_id);
+      if (!org || org.status !== 'ACTIVE') {
+        throw new Error('Your organization is not active. Please contact administrator.');
+      }
+      
+      // Get organization's license
+      const license = getOrgLicense(user.org_id);
+      const licenseTier = license?.tier || LICENSE_TIER.EVALUATION;
+      
       // Clear failed login attempts on successful login
       clearFailedLogins(email);
       
-      // Create session with proper expiration
+      // Create session with org_id
       const sessionId = uuidv4();
       const expiresAtDate = new Date(Date.now() + SESSION_DURATION_MS);
       const expiresAt = expiresAtDate.toISOString();
       
       db.prepare(`
-        INSERT INTO sessions (id, user_id, expires_at)
-        VALUES (?, ?, ?)
-      `).run(sessionId, user.id, expiresAt);
+        INSERT INTO sessions (id, user_id, org_id, expires_at)
+        VALUES (?, ?, ?, ?)
+      `).run(sessionId, user.id, user.org_id, expiresAt);
       
       // Update last login
-      db.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").run(user.id);
+      db.prepare("UPDATE users SET last_login = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(user.id);
       
-      // Store current session with expiry
+      // Store current session with expiry and org_id
+      // CRITICAL: Session stores org_id - all downstream operations use this
       currentSession = sessionId;
       sessionExpiry = expiresAtDate.getTime();
       currentUser = {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
-        role: user.role
+        role: user.role,
+        org_id: user.org_id,           // REQUIRED for org isolation
+        org_name: org.name,             // For display
+        license_tier: licenseTier,      // For feature gating
       };
       
       // Log login (without sensitive details)
@@ -287,7 +600,9 @@ function setupIPCHandlers() {
       return { success: true, user: currentUser };
     } catch (error) {
       // Don't expose internal error details to client
-      const safeMessage = error.message.includes('locked') || error.message === 'Invalid credentials' 
+      const safeMessage = error.message.includes('locked') || 
+                          error.message === 'Invalid credentials' ||
+                          error.message.includes('organization')
         ? error.message 
         : 'Authentication failed';
       throw new Error(safeMessage);
@@ -319,12 +634,22 @@ function setupIPCHandlers() {
   });
   
   ipcMain.handle('auth:register', async (event, userData) => {
+    // Get or create default organization for first-time setup
+    let defaultOrg = getDefaultOrganization();
+    
     // Check if registration is allowed
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
     
-    // Only allow registration if no users exist or if called by admin
+    // Only allow registration if no users exist (first-time setup) or if called by admin
     if (userCount.count > 0 && (!currentUser || currentUser.role !== 'admin')) {
       throw new Error('Registration not allowed. Please contact administrator.');
+    }
+    
+    // If this is first user, they must create an organization first
+    if (!defaultOrg) {
+      // Create default organization for this installation
+      const { createDefaultOrganization } = require('../database/init.cjs');
+      defaultOrg = createDefaultOrganization();
     }
     
     // Validate email format
@@ -346,13 +671,17 @@ function setupIPCHandlers() {
     
     const hashedPassword = await bcrypt.hash(userData.password, 12);
     const userId = uuidv4();
+    const now = new Date().toISOString();
+    
+    // CRITICAL: Always associate user with an organization
+    const orgId = currentUser?.org_id || defaultOrg.id;
     
     db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, userData.email, hashedPassword, userData.full_name.trim(), userData.role || 'user');
+      INSERT INTO users (id, org_id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, orgId, userData.email, hashedPassword, userData.full_name.trim(), userData.role || 'admin', 1, now, now);
     
-    logAudit('create', 'User', userId, null, 'User registered', userData.email, userData.role || 'user');
+    logAudit('create', 'User', userId, null, 'User registered', userData.email, userData.role || 'admin');
     
     return { success: true, id: userId };
   });
@@ -387,10 +716,29 @@ function setupIPCHandlers() {
       throw new Error('Unauthorized: Admin access required');
     }
     
+    const orgId = getSessionOrgId(); // CRITICAL: Use session org_id, never from client
+    
+    // Check user limit for this organization
+    const userCount = getUserCount(orgId);
+    const tier = getSessionTier();
+    const limitCheck = checkDataLimit(tier, 'maxUsers', userCount);
+    if (!limitCheck.allowed) {
+      throw new Error(`User limit reached (${limitCheck.limit}). Please upgrade your license to add more users.`);
+    }
+    
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userData.email)) {
       throw new Error('Invalid email format');
+    }
+    
+    // Check email uniqueness within organization (not global)
+    const existingUser = db.prepare(`
+      SELECT id FROM users WHERE org_id = ? AND email = ?
+    `).get(orgId, userData.email);
+    
+    if (existingUser) {
+      throw new Error('A user with this email already exists in your organization.');
     }
     
     // Validate password strength
@@ -401,11 +749,12 @@ function setupIPCHandlers() {
     
     const hashedPassword = await bcrypt.hash(userData.password, 12);
     const userId = uuidv4();
+    const now = new Date().toISOString();
     
     db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role, is_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(userId, userData.email, hashedPassword, userData.full_name, userData.role || 'user', 1);
+      INSERT INTO users (id, org_id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, orgId, userData.email, hashedPassword, userData.full_name, userData.role || 'user', 1, now, now);
     
     logAudit('create', 'User', userId, null, 'User created', currentUser.email, currentUser.role);
     
@@ -415,11 +764,14 @@ function setupIPCHandlers() {
   ipcMain.handle('auth:listUsers', async () => {
     if (!validateSession()) throw new Error('Session expired. Please log in again.');
     
+    const orgId = getSessionOrgId(); // CRITICAL: Only return users from current org
+    
     const users = db.prepare(`
-      SELECT id, email, full_name, role, is_active, created_date, last_login
+      SELECT id, email, full_name, role, is_active, created_at, last_login
       FROM users
-      ORDER BY created_date DESC
-    `).all();
+      WHERE org_id = ?
+      ORDER BY created_at DESC
+    `).all(orgId);
     
     return users;
   });
@@ -490,11 +842,18 @@ function setupIPCHandlers() {
   });
   
   // ===== ENTITY OPERATIONS =====
+  // CRITICAL: All entity operations enforce org isolation using session.org_id
+  // Never accept org_id from client data - always use getSessionOrgId()
+  
   ipcMain.handle('entity:create', async (event, entityName, data) => {
     if (!validateSession()) throw new Error('Session expired. Please log in again.');
     
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
+    
+    // CRITICAL: Get org_id from session, never from client
+    const orgId = getSessionOrgId();
+    const tier = getSessionTier();
     
     // Prevent creation of audit logs via generic handler (HIPAA compliance)
     // Audit logs should only be created internally via logAudit function
@@ -502,20 +861,19 @@ function setupIPCHandlers() {
       throw new Error('Audit logs cannot be created directly');
     }
     
-    // Check license limits for patients and donors
-    // Wrapped in try-catch to ensure demo/dev mode works even if license module has issues
+    // Check license limits for patients and donors (org-scoped)
     try {
       if (entityName === 'Patient') {
-        const currentCount = db.prepare('SELECT COUNT(*) as count FROM patients').get().count;
-        const limitCheck = featureGate.canWithinLimit('maxPatients', currentCount);
+        const currentCount = getPatientCount(orgId);
+        const limitCheck = checkDataLimit(tier, 'maxPatients', currentCount);
         if (!limitCheck.allowed) {
           throw new Error(`Patient limit reached (${limitCheck.limit}). Please upgrade your license to add more patients.`);
         }
       }
       
       if (entityName === 'DonorOrgan') {
-        const currentCount = db.prepare('SELECT COUNT(*) as count FROM donor_organs').get().count;
-        const limitCheck = featureGate.canWithinLimit('maxDonors', currentCount);
+        const currentCount = db.prepare('SELECT COUNT(*) as count FROM donor_organs WHERE org_id = ?').get(orgId).count;
+        const limitCheck = checkDataLimit(tier, 'maxDonors', currentCount);
         if (!limitCheck.allowed) {
           throw new Error(`Donor limit reached (${limitCheck.limit}). Please upgrade your license to add more donors.`);
         }
@@ -526,19 +884,31 @@ function setupIPCHandlers() {
         throw new Error('Application is in read-only mode. Please activate or renew your license to make changes.');
       }
     } catch (licenseError) {
-      // Log license check errors but don't block operations in development/demo
-      console.warn('License check warning:', licenseError.message);
-      // Only block if it's a limit/read-only error, not a license system error
+      // SECURITY: Fail closed on license errors
+      // Only fail-open with explicit dev flag
+      const failOpen = process.env.NODE_ENV === 'development' && process.env.LICENSE_FAIL_OPEN === 'true';
+      
+      if (!failOpen) {
+        // Log and re-throw all license errors in production
+        console.error('License check error:', licenseError.message);
+        throw licenseError;
+      }
+      
+      // In dev mode with fail-open flag, only block on explicit limits
+      console.warn('License check warning (dev mode):', licenseError.message);
       if (licenseError.message.includes('limit reached') || 
           licenseError.message.includes('read-only mode')) {
         throw licenseError;
       }
-      // Otherwise, allow the operation to proceed (fail-open for dev/demo)
     }
     
     // Generate ID if not provided
     const id = data.id || uuidv4();
-    const entityData = { ...data, id, created_by: currentUser.email };
+    
+    // CRITICAL: Add org_id to entity data (enforces org isolation)
+    // Remove any client-provided org_id to prevent cross-org data injection
+    delete data.org_id;
+    const entityData = { ...data, id, org_id: orgId, created_by: currentUser.email };
     
     // Sanitize all values for SQLite compatibility
     // SQLite only accepts: numbers, strings, bigints, buffers, and null
@@ -607,7 +977,9 @@ function setupIPCHandlers() {
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
-    return getEntityById(tableName, id);
+    // CRITICAL: Get entity only if it belongs to current org
+    const orgId = getSessionOrgId();
+    return getEntityByIdAndOrg(tableName, id, orgId);
   });
   
   ipcMain.handle('entity:update', async (event, entityName, id, data) => {
@@ -616,13 +988,27 @@ function setupIPCHandlers() {
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
+    // CRITICAL: Enforce org isolation
+    const orgId = getSessionOrgId();
+    
     // Prevent modification of audit logs (HIPAA compliance)
     if (entityName === 'AuditLog') {
       throw new Error('Audit logs cannot be modified');
     }
     
-    const entityData = { ...data, updated_by: currentUser.email, updated_date: new Date().toISOString() };
+    // CRITICAL: Verify entity belongs to user's organization before update
+    const existingEntity = getEntityByIdAndOrg(tableName, id, orgId);
+    if (!existingEntity) {
+      throw new Error(`${entityName} not found or access denied`);
+    }
+    
+    const now = new Date().toISOString();
+    const entityData = { ...data, updated_by: currentUser.email, updated_at: now };
+    
+    // Remove fields that should not be updated
     delete entityData.id;
+    delete entityData.org_id; // CRITICAL: Never allow org_id change
+    delete entityData.created_at;
     delete entityData.created_date;
     delete entityData.created_by;
     
@@ -652,14 +1038,15 @@ function setupIPCHandlers() {
       // Keep numbers, strings, bigints, buffers, and null as-is
     }
     
-    // Build update statement
+    // Build update statement with org_id check
     const updates = Object.keys(entityData).map(k => `${k} = ?`).join(', ');
-    const values = [...Object.values(entityData), id];
+    const values = [...Object.values(entityData), id, orgId];
     
-    db.prepare(`UPDATE ${tableName} SET ${updates} WHERE id = ?`).run(...values);
+    // CRITICAL: WHERE clause includes org_id to prevent cross-org updates
+    db.prepare(`UPDATE ${tableName} SET ${updates} WHERE id = ? AND org_id = ?`).run(...values);
     
-    // Get patient name for audit log
-    const entity = getEntityById(tableName, id);
+    // Get updated entity
+    const entity = getEntityByIdAndOrg(tableName, id, orgId);
     let patientName = null;
     if (entityName === 'Patient') {
       patientName = `${entity.first_name} ${entity.last_name}`;
@@ -678,13 +1065,20 @@ function setupIPCHandlers() {
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
+    // CRITICAL: Enforce org isolation
+    const orgId = getSessionOrgId();
+    
     // Prevent deletion of audit logs (HIPAA compliance)
     if (entityName === 'AuditLog') {
       throw new Error('Audit logs cannot be deleted');
     }
     
-    // Get entity for audit log before deletion
-    const entity = getEntityById(tableName, id);
+    // CRITICAL: Verify entity belongs to user's organization before delete
+    const entity = getEntityByIdAndOrg(tableName, id, orgId);
+    if (!entity) {
+      throw new Error(`${entityName} not found or access denied`);
+    }
+    
     let patientName = null;
     if (entityName === 'Patient' && entity) {
       patientName = `${entity.first_name} ${entity.last_name}`;
@@ -692,7 +1086,8 @@ function setupIPCHandlers() {
       patientName = entity.patient_name;
     }
     
-    db.prepare(`DELETE FROM ${tableName} WHERE id = ?`).run(id);
+    // CRITICAL: DELETE includes org_id check to prevent cross-org deletes
+    db.prepare(`DELETE FROM ${tableName} WHERE id = ? AND org_id = ?`).run(id, orgId);
     
     logAudit('delete', entityName, id, patientName, `${entityName} deleted`, currentUser.email, currentUser.role);
     
@@ -705,34 +1100,10 @@ function setupIPCHandlers() {
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
-    let query = `SELECT * FROM ${tableName}`;
+    // CRITICAL: Enforce org isolation - only return data from user's organization
+    const orgId = getSessionOrgId();
     
-    // Handle ordering with SQL injection prevention
-    if (orderBy) {
-      const desc = orderBy.startsWith('-');
-      const field = desc ? orderBy.substring(1) : orderBy;
-      
-      // Validate column name against whitelist to prevent SQL injection
-      if (!isValidOrderColumn(tableName, field)) {
-        throw new Error(`Invalid sort field: ${field}`);
-      }
-      
-      query += ` ORDER BY ${field} ${desc ? 'DESC' : 'ASC'}`;
-    } else {
-      query += ' ORDER BY created_date DESC';
-    }
-    
-    // Handle limit with bounds validation
-    if (limit) {
-      const parsedLimit = parseInt(limit, 10);
-      if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 10000) {
-        throw new Error('Invalid limit value. Must be between 1 and 10000.');
-      }
-      query += ` LIMIT ${parsedLimit}`;
-    }
-    
-    const rows = db.prepare(query).all();
-    return rows.map(row => parseJsonFields(row));
+    return listEntitiesByOrg(tableName, orgId, orderBy, limit);
   });
   
   ipcMain.handle('entity:filter', async (event, entityName, filters, orderBy, limit) => {
@@ -741,29 +1112,31 @@ function setupIPCHandlers() {
     const tableName = entityTableMap[entityName];
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
+    // CRITICAL: Enforce org isolation - filter must include org_id
+    const orgId = getSessionOrgId();
+    
     // Get allowed columns for this table to validate filter keys
     const allowedColumns = ALLOWED_ORDER_COLUMNS[tableName] || [];
     
-    let query = `SELECT * FROM ${tableName}`;
-    const conditions = [];
-    const values = [];
+    // CRITICAL: Always filter by org_id first
+    let query = `SELECT * FROM ${tableName} WHERE org_id = ?`;
+    const values = [orgId];
     
-    // Build WHERE clause with column validation
+    // Build additional WHERE conditions with column validation
     if (filters && typeof filters === 'object') {
+      // Remove any client-provided org_id to prevent cross-org access
+      delete filters.org_id;
+      
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
           // Validate filter column name to prevent SQL injection
-          if (!allowedColumns.includes(key) && !['id', 'created_date', 'updated_date'].includes(key)) {
+          if (!allowedColumns.includes(key) && !['id', 'created_at', 'updated_at', 'created_date', 'updated_date'].includes(key)) {
             throw new Error(`Invalid filter field: ${key}`);
           }
-          conditions.push(`${key} = ?`);
+          query += ` AND ${key} = ?`;
           values.push(value);
         }
       }
-    }
-    
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
     }
     
     // Handle ordering with SQL injection prevention
@@ -778,7 +1151,7 @@ function setupIPCHandlers() {
       
       query += ` ORDER BY ${field} ${desc ? 'DESC' : 'ASC'}`;
     } else {
-      query += ' ORDER BY created_date DESC';
+      query += ' ORDER BY COALESCE(created_at, created_date) DESC';
     }
     
     // Handle limit with bounds validation
@@ -808,29 +1181,8 @@ function setupIPCHandlers() {
     return result;
   });
   
-  // ===== SETTINGS =====
-  ipcMain.handle('settings:get', async (event, key) => {
-    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-    return row ? JSON.parse(row.value) : null;
-  });
-  
-  ipcMain.handle('settings:set', async (event, key, value) => {
-    db.prepare(`
-      INSERT INTO settings (key, value, updated_date)
-      VALUES (?, ?, datetime('now'))
-      ON CONFLICT(key) DO UPDATE SET value = ?, updated_date = datetime('now')
-    `).run(key, JSON.stringify(value), JSON.stringify(value));
-    return { success: true };
-  });
-  
-  ipcMain.handle('settings:getAll', async () => {
-    const rows = db.prepare('SELECT key, value FROM settings').all();
-    const settings = {};
-    for (const row of rows) {
-      settings[row.key] = JSON.parse(row.value);
-    }
-    return settings;
-  });
+  // NOTE: Settings handlers are defined in the ORG-SCOPED SETTINGS section above.
+  // Do NOT add duplicate handlers here - they would bypass org isolation.
   
   // ===== OPERATIONAL RISK INTELLIGENCE =====
   ipcMain.handle('risk:getDashboard', async () => {
@@ -1513,10 +1865,77 @@ function setupIPCHandlers() {
     return { success: true };
   });
   
-  // Helper functions
+  // =========================================================================
+  // HELPER FUNCTIONS
+  // =========================================================================
+  
+  /**
+   * Get entity by ID (legacy - no org check)
+   * @deprecated Use getEntityByIdAndOrg for org-isolated queries
+   */
   function getEntityById(tableName, id) {
     const row = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(id);
     return row ? parseJsonFields(row) : null;
+  }
+  
+  /**
+   * Get entity by ID with org isolation
+   * CRITICAL: This ensures users can only access data from their organization
+   * @param {string} tableName - The table name
+   * @param {string} id - The entity ID
+   * @param {string} orgId - The organization ID
+   * @returns {Object|null} The entity or null if not found/not in org
+   */
+  function getEntityByIdAndOrg(tableName, id, orgId) {
+    if (!orgId) {
+      throw new Error('Organization context required for data access');
+    }
+    const row = db.prepare(`SELECT * FROM ${tableName} WHERE id = ? AND org_id = ?`).get(id, orgId);
+    return row ? parseJsonFields(row) : null;
+  }
+  
+  /**
+   * List entities with org isolation
+   * @param {string} tableName - The table name
+   * @param {string} orgId - The organization ID
+   * @param {string} orderBy - Column to order by (with optional - prefix for DESC)
+   * @param {number} limit - Max rows to return
+   * @returns {Array} List of entities
+   */
+  function listEntitiesByOrg(tableName, orgId, orderBy, limit) {
+    if (!orgId) {
+      throw new Error('Organization context required for data access');
+    }
+    
+    let query = `SELECT * FROM ${tableName} WHERE org_id = ?`;
+    
+    // Handle ordering with SQL injection prevention
+    if (orderBy) {
+      const desc = orderBy.startsWith('-');
+      const field = desc ? orderBy.substring(1) : orderBy;
+      
+      // Validate column name against whitelist
+      if (!isValidOrderColumn(tableName, field)) {
+        throw new Error(`Invalid sort field: ${field}`);
+      }
+      
+      query += ` ORDER BY ${field} ${desc ? 'DESC' : 'ASC'}`;
+    } else {
+      // Use created_at (new schema) or created_date (old schema)
+      query += ' ORDER BY COALESCE(created_at, created_date) DESC';
+    }
+    
+    // Handle limit with bounds validation
+    if (limit) {
+      const parsedLimit = parseInt(limit, 10);
+      if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 10000) {
+        throw new Error('Invalid limit value. Must be between 1 and 10000.');
+      }
+      query += ` LIMIT ${parsedLimit}`;
+    }
+    
+    const rows = db.prepare(query).all(orgId);
+    return rows.map(row => parseJsonFields(row));
   }
   
   function parseJsonFields(row) {
@@ -1534,12 +1953,20 @@ function setupIPCHandlers() {
     return parsed;
   }
   
+  /**
+   * Log audit event with org isolation
+   * All audit logs are scoped to the current organization
+   */
   function logAudit(action, entityType, entityId, patientName, details, userEmail, userRole) {
     const id = uuidv4();
+    // Get org_id from session if available, otherwise use 'SYSTEM'
+    const orgId = currentUser?.org_id || 'SYSTEM';
+    const now = new Date().toISOString();
+    
     db.prepare(`
-      INSERT INTO audit_logs (id, action, entity_type, entity_id, patient_name, details, user_email, user_role)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, action, entityType, entityId, patientName, details, userEmail, userRole);
+      INSERT INTO audit_logs (id, org_id, action, entity_type, entity_id, patient_name, details, user_email, user_role, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, orgId, action, entityType, entityId, patientName, details, userEmail, userRole, now);
   }
 }
 

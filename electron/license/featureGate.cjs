@@ -110,12 +110,25 @@ function checkApplicationState() {
       info: info,
     };
   } catch (error) {
-    // If license system has an error, default to usable (fail-open for development)
-    console.warn('License check error, defaulting to usable:', error.message);
+    // SECURITY: Fail closed on license errors in production
+    console.error('License check error:', error.message);
+    
+    // Only fail-open in development mode with explicit flag
+    if (process.env.NODE_ENV === 'development' && process.env.LICENSE_FAIL_OPEN === 'true') {
+      console.warn('WARNING: Failing open due to LICENSE_FAIL_OPEN flag');
+      return {
+        usable: true,
+        info: null,
+        warning: error.message,
+      };
+    }
+    
+    // Default: fail closed - application not usable
     return {
-      usable: true,
-      info: null,
-      warning: error.message,
+      usable: false,
+      reason: 'license_check_error',
+      message: 'Unable to verify license. Please contact support.',
+      error: error.message,
     };
   }
 }
@@ -235,14 +248,27 @@ function canWithinLimit(limitType, currentCount) {
       remaining: result.remaining,
     };
   } catch (error) {
-    // If limit check fails, default to allowed (fail-open for development)
-    console.warn('Limit check error, defaulting to allowed:', error.message);
+    // SECURITY: Fail closed on limit check errors
+    console.error('Limit check error:', error.message);
+    
+    // Only fail-open in development mode with explicit flag
+    if (process.env.NODE_ENV === 'development' && process.env.LICENSE_FAIL_OPEN === 'true') {
+      console.warn('WARNING: Failing open on limit check due to LICENSE_FAIL_OPEN flag');
+      return {
+        allowed: true,
+        current: currentCount,
+        limit: -1,
+        remaining: -1,
+        warning: error.message,
+      };
+    }
+    
+    // Default: fail closed - limit exceeded
     return {
-      allowed: true,
-      current: currentCount,
-      limit: -1,
-      remaining: -1,
-      warning: error.message,
+      allowed: false,
+      reason: 'limit_check_error',
+      message: 'Unable to verify limits. Please contact support.',
+      error: error.message,
     };
   }
 }

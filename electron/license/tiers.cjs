@@ -167,43 +167,150 @@ const FEATURES = {
 };
 
 // =============================================================================
-// TIER LIMITS
+// LICENSE FEATURES MAP (Static, Deterministic - Single Source of Truth)
 // =============================================================================
+// This is the authoritative feature map for all license enforcement.
+// No guessing. No runtime "magic". This map is enforced in:
+// 1. Backend (authoritative) - throws ForbiddenError if feature not available
+// 2. UI (usability) - disables buttons, shows upgrade prompts
+// 3. Data layer (hard stop) - rejects operations that exceed limits
+//
+// SECURITY: This object is FROZEN to prevent runtime modification
 
-const TIER_LIMITS = {
-  [LICENSE_TIER.EVALUATION]: {
+const LICENSE_FEATURES = Object.freeze({
+  [LICENSE_TIER.EVALUATION]: Object.freeze({
     maxPatients: 50,
     maxDonors: 5,
     maxUsers: 1,
     maxInstallations: 1,
     evaluationDays: 14,
-    dataExportAllowed: false,
-    dataImportAllowed: false,
-  },
-  [LICENSE_TIER.STARTER]: {
+    // Features
+    fhir: false,
+    fhirImport: false,
+    fhirExport: false,
+    advancedAudit: false,
+    multiUser: false,
+    dataExport: false,
+    dataImport: false,
+    customIntegrations: false,
+    bulkOperations: false,
+    customReports: false,
+    priorityConfig: false,
+    apiAccess: false,
+    ssoIntegration: false,
+    advancedMatching: false,
+    disasterRecovery: false,
+    complianceCenter: true,
+    riskDashboard: true,
+    basicAudit: true,
+    patientManagement: true,
+    donorManagement: true,
+    matching: true,
+    notifications: true,
+    backup: true,
+    restore: false,
+  }),
+  [LICENSE_TIER.STARTER]: Object.freeze({
     maxPatients: 500,
     maxDonors: -1, // Unlimited
     maxUsers: 3,
     maxInstallations: 1,
-    dataExportAllowed: true,
-    dataImportAllowed: true,
-  },
-  [LICENSE_TIER.PROFESSIONAL]: {
-    maxPatients: -1, // Unlimited
+    // Features
+    fhir: false,
+    fhirImport: false,
+    fhirExport: false,
+    advancedAudit: false,
+    multiUser: false, // Up to 3 users but not true multi-user
+    dataExport: true,
+    dataImport: true,
+    customIntegrations: false,
+    bulkOperations: false,
+    customReports: false,
+    priorityConfig: false,
+    apiAccess: false,
+    ssoIntegration: false,
+    advancedMatching: false,
+    disasterRecovery: false,
+    complianceCenter: true,
+    riskDashboard: true,
+    basicAudit: true,
+    patientManagement: true,
+    donorManagement: true,
+    matching: true,
+    notifications: true,
+    backup: true,
+    restore: true,
+  }),
+  [LICENSE_TIER.PROFESSIONAL]: Object.freeze({
+    maxPatients: -1, // Unlimited (Infinity in JS)
     maxDonors: -1,
     maxUsers: 10,
     maxInstallations: 5,
-    dataExportAllowed: true,
-    dataImportAllowed: true,
-  },
-  [LICENSE_TIER.ENTERPRISE]: {
-    maxPatients: -1,
+    // Features
+    fhir: true,
+    fhirImport: true,
+    fhirExport: true,
+    advancedAudit: true,
+    multiUser: true,
+    dataExport: true,
+    dataImport: true,
+    customIntegrations: false,
+    bulkOperations: true,
+    customReports: true,
+    priorityConfig: true,
+    apiAccess: false,
+    ssoIntegration: false,
+    advancedMatching: true,
+    disasterRecovery: true,
+    complianceCenter: true,
+    riskDashboard: true,
+    basicAudit: true,
+    patientManagement: true,
+    donorManagement: true,
+    matching: true,
+    notifications: true,
+    backup: true,
+    restore: true,
+  }),
+  [LICENSE_TIER.ENTERPRISE]: Object.freeze({
+    maxPatients: -1, // Unlimited (Infinity in JS)
     maxDonors: -1,
     maxUsers: -1, // Unlimited
-    maxInstallations: -1,
-    dataExportAllowed: true,
-    dataImportAllowed: true,
-  },
+    maxInstallations: -1, // Unlimited
+    // Features - ALL enabled
+    fhir: true,
+    fhirImport: true,
+    fhirExport: true,
+    advancedAudit: true,
+    multiUser: true,
+    dataExport: true,
+    dataImport: true,
+    customIntegrations: true,
+    bulkOperations: true,
+    customReports: true,
+    priorityConfig: true,
+    apiAccess: true,
+    ssoIntegration: true,
+    advancedMatching: true,
+    disasterRecovery: true,
+    complianceCenter: true,
+    riskDashboard: true,
+    basicAudit: true,
+    patientManagement: true,
+    donorManagement: true,
+    matching: true,
+    notifications: true,
+    backup: true,
+    restore: true,
+  }),
+});
+
+// Backward compatibility alias
+const TIER_LIMITS = {
+  [LICENSE_TIER.EVALUATION]: LICENSE_FEATURES[LICENSE_TIER.EVALUATION],
+  [LICENSE_TIER.STARTER]: LICENSE_FEATURES[LICENSE_TIER.STARTER],
+  [LICENSE_TIER.PROFESSIONAL]: LICENSE_FEATURES[LICENSE_TIER.PROFESSIONAL],
+  [LICENSE_TIER.ENTERPRISE]: LICENSE_FEATURES[LICENSE_TIER.ENTERPRISE],
 };
 
 // =============================================================================
@@ -408,7 +515,43 @@ function getEnabledFeatures(tier) {
  * Get limits for a tier
  */
 function getTierLimits(tier) {
-  return TIER_LIMITS[tier] || TIER_LIMITS[LICENSE_TIER.EVALUATION];
+  return LICENSE_FEATURES[tier] || LICENSE_FEATURES[LICENSE_TIER.EVALUATION];
+}
+
+/**
+ * Get license features for a tier (authoritative source)
+ */
+function getLicenseFeatures(tier) {
+  return LICENSE_FEATURES[tier] || LICENSE_FEATURES[LICENSE_TIER.EVALUATION];
+}
+
+/**
+ * Check if a specific feature is enabled for a tier
+ * This is the authoritative check used by backend enforcement
+ */
+function hasFeature(tier, featureName) {
+  const features = LICENSE_FEATURES[tier] || LICENSE_FEATURES[LICENSE_TIER.EVALUATION];
+  return features[featureName] === true;
+}
+
+/**
+ * Check if within data limit
+ * Returns true if current count is below limit, or limit is unlimited (-1)
+ */
+function checkDataLimit(tier, limitName, currentCount) {
+  const features = LICENSE_FEATURES[tier] || LICENSE_FEATURES[LICENSE_TIER.EVALUATION];
+  const limit = features[limitName];
+  
+  if (limit === -1 || limit === undefined) {
+    return { allowed: true, limit: -1, current: currentCount };
+  }
+  
+  return {
+    allowed: currentCount < limit,
+    limit: limit,
+    current: currentCount,
+    remaining: Math.max(0, limit - currentCount),
+  };
 }
 
 /**
@@ -458,7 +601,8 @@ module.exports = {
   LICENSE_TIER,
   FEATURES,
   
-  // Configuration
+  // Configuration (LICENSE_FEATURES is the authoritative source)
+  LICENSE_FEATURES,
   PRICING,
   TIER_LIMITS,
   TIER_FEATURES,
@@ -471,6 +615,9 @@ module.exports = {
   isFeatureEnabled,
   getEnabledFeatures,
   getTierLimits,
+  getLicenseFeatures,
+  hasFeature,
+  checkDataLimit,
   getTierPricing,
   isWithinLimit,
   getPaymentLink,

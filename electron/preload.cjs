@@ -164,6 +164,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     isEnabled: () => ipcRenderer.invoke('encryption:isEnabled'),
   },
   
+  // Organization Management
+  organization: {
+    getCurrent: () => ipcRenderer.invoke('organization:getCurrent'),
+    update: (updates) => ipcRenderer.invoke('organization:update', updates),
+  },
+  
   // Menu event listeners
   onMenuExport: (callback) => {
     ipcRenderer.on('menu-export', callback);

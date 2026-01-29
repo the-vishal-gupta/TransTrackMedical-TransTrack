@@ -12,8 +12,15 @@
 
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
-const { initDatabase, closeDatabase } = require('./database/init.cjs');
+const { initDatabase, closeDatabase, getDefaultOrganization, getOrgLicense } = require('./database/init.cjs');
 const { setupIPCHandlers } = require('./ipc/handlers.cjs');
+const { 
+  getCurrentBuildVersion, 
+  BUILD_VERSION, 
+  LICENSE_TIER,
+  EVALUATION_RESTRICTIONS,
+  isEvaluationBuild
+} = require('./license/tiers.cjs');
 
 // Disable hardware acceleration for better compatibility
 app.disableHardwareAcceleration();
@@ -214,9 +221,86 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
+// =========================================================================
+// BUILD TYPE ENFORCEMENT
+// =========================================================================
+
+/**
+ * Check if Enterprise build has a valid license
+ * Returns null if OK, or error message if blocked
+ */
+function checkEnterpriseLicense() {
+  const buildVersion = getCurrentBuildVersion();
+  
+  // Evaluation builds don't need license check (they have evaluation restrictions)
+  if (buildVersion === BUILD_VERSION.EVALUATION) {
+    return null; // OK, evaluation restrictions apply elsewhere
+  }
+  
+  // Enterprise build - require valid license
+  try {
+    const defaultOrg = getDefaultOrganization();
+    if (!defaultOrg) {
+      return 'No organization configured. Please set up your organization first.';
+    }
+    
+    const license = getOrgLicense(defaultOrg.id);
+    if (!license) {
+      return 'No license found. Please activate your license to use TransTrack Enterprise.';
+    }
+    
+    // Check license tier (evaluation tier on enterprise build = no valid license)
+    if (license.tier === LICENSE_TIER.EVALUATION) {
+      return 'Please activate a valid license to use TransTrack Enterprise.';
+    }
+    
+    // Check license expiration
+    if (license.license_expires_at) {
+      const expiry = new Date(license.license_expires_at);
+      if (expiry < new Date()) {
+        return `Your license expired on ${expiry.toLocaleDateString()}. Please renew to continue using TransTrack.`;
+      }
+    }
+    
+    return null; // License is valid
+  } catch (error) {
+    console.error('License check error:', error);
+    // Fail-open in development, fail-closed in production
+    if (isDev) {
+      return null;
+    }
+    return 'Unable to verify license. Please contact support.';
+  }
+}
+
+/**
+ * Show license required dialog and block app
+ */
+function showLicenseRequiredDialog(message) {
+  const result = dialog.showMessageBoxSync(null, {
+    type: 'warning',
+    title: 'License Required - TransTrack Enterprise',
+    message: 'License Activation Required',
+    detail: `${message}\n\nTo activate a license:\n1. Contact Trans_Track@outlook.com\n2. Provide your Organization ID\n3. Complete payment\n4. Enter your license key in Settings\n\nAlternatively, download the Evaluation version for a 14-day trial.`,
+    buttons: ['Quit', 'Continue Anyway (Dev Only)'],
+    defaultId: 0,
+    cancelId: 0,
+  });
+  
+  // Only allow "Continue Anyway" in dev mode
+  if (result === 1 && isDev) {
+    console.warn('WARNING: Continuing without license in development mode');
+    return false; // Don't block
+  }
+  
+  return true; // Block
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   console.log('TransTrack starting...');
+  const buildVersion = getCurrentBuildVersion();
+  console.log(`Build version: ${buildVersion}`);
   
   // Show splash screen
   createSplashWindow();
@@ -225,6 +309,26 @@ app.whenReady().then(async () => {
     // Initialize encrypted database
     await initDatabase();
     console.log('Database initialized');
+    
+    // =========================================================================
+    // ENTERPRISE LICENSE ENFORCEMENT
+    // =========================================================================
+    // If this is an Enterprise build, require a valid license
+    // If this is an Evaluation build, evaluation restrictions apply in handlers
+    
+    const licenseError = checkEnterpriseLicense();
+    if (licenseError && buildVersion === BUILD_VERSION.ENTERPRISE) {
+      if (splashWindow) {
+        splashWindow.destroy();
+        splashWindow = null;
+      }
+      
+      if (showLicenseRequiredDialog(licenseError)) {
+        console.log('License required - application blocked');
+        app.quit();
+        return;
+      }
+    }
     
     // Setup IPC handlers for renderer process communication
     setupIPCHandlers();
@@ -235,6 +339,15 @@ app.whenReady().then(async () => {
     
     // Create main window
     createMainWindow();
+    
+    // If evaluation build, log restriction info
+    if (buildVersion === BUILD_VERSION.EVALUATION) {
+      console.log('Running in Evaluation mode - restrictions apply:');
+      console.log(`  - Max patients: ${EVALUATION_RESTRICTIONS.maxPatients}`);
+      console.log(`  - Max users: ${EVALUATION_RESTRICTIONS.maxUsers}`);
+      console.log(`  - Evaluation period: ${EVALUATION_RESTRICTIONS.maxDays} days`);
+      console.log(`  - Disabled features: ${EVALUATION_RESTRICTIONS.disabledFeatures.length}`);
+    }
   } catch (error) {
     console.error('Failed to initialize application:', error);
     dialog.showErrorBox('Startup Error', `Failed to initialize TransTrack: ${error.message}`);
