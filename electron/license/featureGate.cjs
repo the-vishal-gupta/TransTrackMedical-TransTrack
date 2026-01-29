@@ -78,36 +78,46 @@ class EvaluationBuildError extends Error {
  * Returns error info if not usable
  */
 function checkApplicationState() {
-  const info = getLicenseInfo();
-  
-  // Check if evaluation has hard expired (no grace period)
-  if (info.isEvaluation && info.evaluationExpired && !info.evaluationInGracePeriod) {
-    if (isEvaluationBuild() && EVALUATION_RESTRICTIONS.forceExpirationLockout) {
+  try {
+    const info = getLicenseInfo();
+    
+    // Check if evaluation has hard expired (no grace period)
+    if (info.isEvaluation && info.evaluationExpired && !info.evaluationInGracePeriod) {
+      if (isEvaluationBuild() && EVALUATION_RESTRICTIONS.forceExpirationLockout) {
+        return {
+          usable: false,
+          reason: 'evaluation_expired',
+          message: 'Your 14-day evaluation period has expired. Please purchase a license to continue.',
+          upgradeRequired: true,
+          readOnlyAllowed: true, // Allow read-only access
+        };
+      }
+    }
+    
+    // License validation failed
+    if (info.validationError) {
       return {
         usable: false,
-        reason: 'evaluation_expired',
-        message: 'Your 14-day evaluation period has expired. Please purchase a license to continue.',
-        upgradeRequired: true,
-        readOnlyAllowed: true, // Allow read-only access
+        reason: 'license_invalid',
+        message: info.validationError,
+        upgradeRequired: false,
+        readOnlyAllowed: true,
       };
     }
-  }
-  
-  // License validation failed
-  if (info.validationError) {
+    
     return {
-      usable: false,
-      reason: 'license_invalid',
-      message: info.validationError,
-      upgradeRequired: false,
-      readOnlyAllowed: true,
+      usable: true,
+      info: info,
+    };
+  } catch (error) {
+    // If license system has an error, default to usable (fail-open for development)
+    console.warn('License check error, defaulting to usable:', error.message);
+    return {
+      usable: true,
+      info: null,
+      warning: error.message,
     };
   }
-  
-  return {
-    usable: true,
-    info: info,
-  };
 }
 
 /**
@@ -204,25 +214,37 @@ function gateFeature(feature) {
  * Check if within a specific limit
  */
 function canWithinLimit(limitType, currentCount) {
-  const result = checkLimit(limitType, currentCount);
-  
-  if (!result.withinLimit) {
+  try {
+    const result = checkLimit(limitType, currentCount);
+    
+    if (!result.withinLimit) {
+      return {
+        allowed: false,
+        reason: 'limit_exceeded',
+        message: result.reason,
+        current: result.current,
+        limit: result.limit,
+        upgradeRequired: result.upgradeRequired,
+      };
+    }
+    
     return {
-      allowed: false,
-      reason: 'limit_exceeded',
-      message: result.reason,
+      allowed: true,
       current: result.current,
       limit: result.limit,
-      upgradeRequired: result.upgradeRequired,
+      remaining: result.remaining,
+    };
+  } catch (error) {
+    // If limit check fails, default to allowed (fail-open for development)
+    console.warn('Limit check error, defaulting to allowed:', error.message);
+    return {
+      allowed: true,
+      current: currentCount,
+      limit: -1,
+      remaining: -1,
+      warning: error.message,
     };
   }
-  
-  return {
-    allowed: true,
-    current: result.current,
-    limit: result.limit,
-    remaining: result.remaining,
-  };
 }
 
 /**
@@ -317,13 +339,19 @@ function requireAllowedOnBuild(action) {
  * Check if in read-only mode (expired evaluation or invalid license)
  */
 function isReadOnlyMode() {
-  const state = checkApplicationState();
-  
-  if (!state.usable && state.readOnlyAllowed) {
-    return true;
+  try {
+    const state = checkApplicationState();
+    
+    if (!state.usable && state.readOnlyAllowed) {
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    // If state check fails, default to not read-only (fail-open for development)
+    console.warn('Read-only mode check error, defaulting to writable:', error.message);
+    return false;
   }
-  
-  return false;
 }
 
 /**

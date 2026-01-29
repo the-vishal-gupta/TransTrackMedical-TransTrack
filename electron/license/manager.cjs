@@ -201,16 +201,34 @@ function isEvaluationMode() {
  * Get evaluation start date, creating if needed
  */
 function getEvaluationStartDate() {
-  const evalPath = getEvalStartPath();
-  
-  if (!fs.existsSync(evalPath)) {
-    const startDate = new Date().toISOString();
-    fs.writeFileSync(evalPath, startDate);
-    logLicenseEvent('evaluation_started', { startDate });
-    return new Date(startDate);
+  try {
+    const evalPath = getEvalStartPath();
+    
+    if (!fs.existsSync(evalPath)) {
+      const startDate = new Date().toISOString();
+      try {
+        fs.writeFileSync(evalPath, startDate);
+        logLicenseEvent('evaluation_started', { startDate });
+      } catch (writeError) {
+        console.warn('Could not write evaluation start file:', writeError.message);
+      }
+      return new Date(startDate);
+    }
+    
+    const content = fs.readFileSync(evalPath, 'utf8').trim();
+    const parsedDate = new Date(content);
+    
+    // Validate the parsed date
+    if (isNaN(parsedDate.getTime())) {
+      console.warn('Invalid evaluation start date in file, using current date');
+      return new Date();
+    }
+    
+    return parsedDate;
+  } catch (error) {
+    console.warn('Error reading evaluation start date, using current date:', error.message);
+    return new Date();
   }
-  
-  return new Date(fs.readFileSync(evalPath, 'utf8'));
 }
 
 /**
@@ -538,85 +556,109 @@ async function renewMaintenance(renewalKey, years = 1) {
  * Get comprehensive license info
  */
 function getLicenseInfo() {
-  const buildVersion = getCurrentBuildVersion();
-  const isEvalBuild = isEvaluationBuild();
-  const license = readLicenseFile();
-  const orgInfo = getOrganizationInfo();
-  
-  // Evaluation build
-  if (isEvalBuild) {
-    const daysRemaining = getEvaluationDaysRemaining();
-    const expired = isEvaluationExpired();
-    const inGrace = isInEvaluationGracePeriod();
+  try {
+    const buildVersion = getCurrentBuildVersion();
+    const isEvalBuild = isEvaluationBuild();
+    const license = readLicenseFile();
+    const orgInfo = getOrganizationInfo();
     
+    // Evaluation build
+    if (isEvalBuild) {
+      const daysRemaining = getEvaluationDaysRemaining();
+      const expired = isEvaluationExpired();
+      const inGrace = isInEvaluationGracePeriod();
+      
+      return {
+        buildVersion: BUILD_VERSION.EVALUATION,
+        isLicensed: false,
+        isEvaluation: true,
+        tier: LICENSE_TIER.EVALUATION,
+        tierName: 'Evaluation',
+        evaluationDaysRemaining: daysRemaining,
+        evaluationExpired: expired,
+        evaluationInGracePeriod: inGrace,
+        orgId: orgInfo.id,
+        orgName: orgInfo.name || 'Evaluation Organization',
+        limits: getTierLimits(LICENSE_TIER.EVALUATION),
+        features: getEnabledFeatures(LICENSE_TIER.EVALUATION),
+        restrictions: EVALUATION_RESTRICTIONS,
+        canActivate: false, // Cannot activate on eval build
+        upgradeRequired: true,
+        upgradeMessage: 'Download the Enterprise version to activate a license.',
+      };
+    }
+    
+    // Enterprise build - no license
+    if (!license) {
+      const daysRemaining = getEvaluationDaysRemaining();
+      const expired = isEvaluationExpired();
+      const inGrace = isInEvaluationGracePeriod();
+      
+      return {
+        buildVersion: BUILD_VERSION.ENTERPRISE,
+        isLicensed: false,
+        isEvaluation: true,
+        tier: LICENSE_TIER.EVALUATION,
+        tierName: 'Evaluation (Unlicensed)',
+        evaluationDaysRemaining: daysRemaining,
+        evaluationExpired: expired,
+        evaluationInGracePeriod: inGrace,
+        orgId: orgInfo.id,
+        orgName: orgInfo.name || 'Unlicensed Organization',
+        limits: getTierLimits(LICENSE_TIER.EVALUATION),
+        features: getEnabledFeatures(LICENSE_TIER.EVALUATION),
+        restrictions: EVALUATION_RESTRICTIONS,
+        canActivate: true,
+        upgradeRequired: true,
+        upgradeMessage: 'Activate a license to unlock all features.',
+      };
+    }
+    
+    // Enterprise build - licensed
+    const validation = validateLicenseData(license);
+    const maintenance = getMaintenanceStatus();
+    
+    return {
+      buildVersion: BUILD_VERSION.ENTERPRISE,
+      isLicensed: validation.valid,
+      isEvaluation: false,
+      tier: license.tier,
+      tierName: getTierDisplayName(license.tier),
+      licenseKey: license.key ? license.key.substring(0, 5) + '-XXXXX-XXXXX-XXXXX-XXXXX' : null,
+      activatedAt: license.activatedAt,
+      orgId: license.orgId,
+      orgName: orgInfo.name || license.customer?.organization || 'Licensed Organization',
+      customer: license.customer,
+      maintenance: maintenance,
+      limits: getTierLimits(license.tier),
+      features: getEnabledFeatures(license.tier),
+      canActivate: true,
+      canUpgrade: license.tier !== LICENSE_TIER.ENTERPRISE,
+      validationError: validation.valid ? null : validation.reason,
+    };
+  } catch (error) {
+    // If license info fails, return safe defaults for evaluation mode
+    console.warn('Error getting license info, defaulting to evaluation:', error.message);
     return {
       buildVersion: BUILD_VERSION.EVALUATION,
       isLicensed: false,
       isEvaluation: true,
       tier: LICENSE_TIER.EVALUATION,
       tierName: 'Evaluation',
-      evaluationDaysRemaining: daysRemaining,
-      evaluationExpired: expired,
-      evaluationInGracePeriod: inGrace,
-      orgId: orgInfo.id,
-      orgName: orgInfo.name || 'Evaluation Organization',
+      evaluationDaysRemaining: 14,
+      evaluationExpired: false,
+      evaluationInGracePeriod: false,
+      orgId: 'eval-' + Date.now(),
+      orgName: 'Evaluation Organization',
       limits: getTierLimits(LICENSE_TIER.EVALUATION),
       features: getEnabledFeatures(LICENSE_TIER.EVALUATION),
       restrictions: EVALUATION_RESTRICTIONS,
-      canActivate: false, // Cannot activate on eval build
+      canActivate: false,
       upgradeRequired: true,
       upgradeMessage: 'Download the Enterprise version to activate a license.',
+      error: error.message,
     };
   }
-  
-  // Enterprise build - no license
-  if (!license) {
-    const daysRemaining = getEvaluationDaysRemaining();
-    const expired = isEvaluationExpired();
-    const inGrace = isInEvaluationGracePeriod();
-    
-    return {
-      buildVersion: BUILD_VERSION.ENTERPRISE,
-      isLicensed: false,
-      isEvaluation: true,
-      tier: LICENSE_TIER.EVALUATION,
-      tierName: 'Evaluation (Unlicensed)',
-      evaluationDaysRemaining: daysRemaining,
-      evaluationExpired: expired,
-      evaluationInGracePeriod: inGrace,
-      orgId: orgInfo.id,
-      orgName: orgInfo.name || 'Unlicensed Organization',
-      limits: getTierLimits(LICENSE_TIER.EVALUATION),
-      features: getEnabledFeatures(LICENSE_TIER.EVALUATION),
-      restrictions: EVALUATION_RESTRICTIONS,
-      canActivate: true,
-      upgradeRequired: true,
-      upgradeMessage: 'Activate a license to unlock all features.',
-    };
-  }
-  
-  // Enterprise build - licensed
-  const validation = validateLicenseData(license);
-  const maintenance = getMaintenanceStatus();
-  
-  return {
-    buildVersion: BUILD_VERSION.ENTERPRISE,
-    isLicensed: validation.valid,
-    isEvaluation: false,
-    tier: license.tier,
-    tierName: getTierDisplayName(license.tier),
-    licenseKey: license.key ? license.key.substring(0, 5) + '-XXXXX-XXXXX-XXXXX-XXXXX' : null,
-    activatedAt: license.activatedAt,
-    orgId: license.orgId,
-    orgName: orgInfo.name || license.customer?.organization || 'Licensed Organization',
-    customer: license.customer,
-    maintenance: maintenance,
-    limits: getTierLimits(license.tier),
-    features: getEnabledFeatures(license.tier),
-    canActivate: true,
-    canUpgrade: license.tier !== LICENSE_TIER.ENTERPRISE,
-    validationError: validation.valid ? null : validation.reason,
-  };
 }
 
 /**

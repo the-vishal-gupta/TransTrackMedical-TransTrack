@@ -251,25 +251,37 @@ function setupIPCHandlers() {
     if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
     
     // Check license limits for patients and donors
-    if (entityName === 'Patient') {
-      const currentCount = db.prepare('SELECT COUNT(*) as count FROM patients').get().count;
-      const limitCheck = featureGate.canWithinLimit('maxPatients', currentCount);
-      if (!limitCheck.allowed) {
-        throw new Error(`Patient limit reached (${limitCheck.limit}). Please upgrade your license to add more patients.`);
+    // Wrapped in try-catch to ensure demo/dev mode works even if license module has issues
+    try {
+      if (entityName === 'Patient') {
+        const currentCount = db.prepare('SELECT COUNT(*) as count FROM patients').get().count;
+        const limitCheck = featureGate.canWithinLimit('maxPatients', currentCount);
+        if (!limitCheck.allowed) {
+          throw new Error(`Patient limit reached (${limitCheck.limit}). Please upgrade your license to add more patients.`);
+        }
       }
-    }
-    
-    if (entityName === 'DonorOrgan') {
-      const currentCount = db.prepare('SELECT COUNT(*) as count FROM donor_organs').get().count;
-      const limitCheck = featureGate.canWithinLimit('maxDonors', currentCount);
-      if (!limitCheck.allowed) {
-        throw new Error(`Donor limit reached (${limitCheck.limit}). Please upgrade your license to add more donors.`);
+      
+      if (entityName === 'DonorOrgan') {
+        const currentCount = db.prepare('SELECT COUNT(*) as count FROM donor_organs').get().count;
+        const limitCheck = featureGate.canWithinLimit('maxDonors', currentCount);
+        if (!limitCheck.allowed) {
+          throw new Error(`Donor limit reached (${limitCheck.limit}). Please upgrade your license to add more donors.`);
+        }
       }
-    }
-    
-    // Check write access (not in read-only mode)
-    if (featureGate.isReadOnlyMode()) {
-      throw new Error('Application is in read-only mode. Please activate or renew your license to make changes.');
+      
+      // Check write access (not in read-only mode)
+      if (featureGate.isReadOnlyMode()) {
+        throw new Error('Application is in read-only mode. Please activate or renew your license to make changes.');
+      }
+    } catch (licenseError) {
+      // Log license check errors but don't block operations in development/demo
+      console.warn('License check warning:', licenseError.message);
+      // Only block if it's a limit/read-only error, not a license system error
+      if (licenseError.message.includes('limit reached') || 
+          licenseError.message.includes('read-only mode')) {
+        throw licenseError;
+      }
+      // Otherwise, allow the operation to proceed (fail-open for dev/demo)
     }
     
     // Generate ID if not provided
