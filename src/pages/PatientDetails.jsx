@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, User, Heart, Droplet, Calendar, Phone, Mail, FileText, Download, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import PriorityBadge from '../components/waitlist/PriorityBadge';
@@ -16,7 +16,9 @@ import { AHHQPanel } from '../components/ahhq';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function PatientDetails() {
-  const urlParams = new URLSearchParams(window.location.search);
+  // Use React Router's useLocation to get query params (works with HashRouter)
+  const location = useLocation();
+  const urlParams = new URLSearchParams(location.search);
   const patientId = urlParams.get('id');
   const queryClient = useQueryClient();
 
