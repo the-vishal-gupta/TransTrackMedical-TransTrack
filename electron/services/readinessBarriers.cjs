@@ -13,14 +13,9 @@
  * for transplant coordination. These are administrative and logistical factors
  * that support care team coordination.
  * 
- * Barrier Types:
- * - Pending testing (scheduling, not results)
- * - Insurance clearance status
- * - Transportation planning
- * - Caregiver/support availability
- * - Housing/distance considerations
- * - Psychosocial follow-up flags (no clinical detail)
- * - Financial clearance status
+ * SECURITY:
+ * All functions require org_id for organization isolation.
+ * Queries always include org_id filtering to prevent cross-org access.
  */
 
 const { getDatabase } = require('../database/init.cjs');
@@ -92,23 +87,60 @@ const OWNING_ROLES = {
   OTHER: { value: 'other', label: 'Other' },
 };
 
+// =============================================================================
+// ORG ISOLATION HELPERS
+// =============================================================================
+
+/**
+ * Validate org_id is present - FAIL CLOSED
+ */
+function requireOrgId(orgId) {
+  if (!orgId) {
+    throw new Error('Organization context required for barrier operations');
+  }
+  return orgId;
+}
+
+/**
+ * Verify patient belongs to org before barrier operation
+ */
+function verifyPatientOrg(patientId, orgId) {
+  const db = getDatabase();
+  const patient = db.prepare('SELECT id FROM patients WHERE id = ? AND org_id = ?').get(patientId, orgId);
+  if (!patient) {
+    throw new Error('Patient not found or access denied');
+  }
+  return true;
+}
+
+// =============================================================================
+// CRUD OPERATIONS (Org-Scoped)
+// =============================================================================
+
 /**
  * Create a new readiness barrier
+ * @param {Object} data - Barrier data
+ * @param {string} userId - User creating the barrier
+ * @param {string} orgId - Organization ID (REQUIRED)
  */
-function createBarrier(data, userId) {
+function createBarrier(data, userId, orgId) {
+  requireOrgId(orgId);
+  verifyPatientOrg(data.patient_id, orgId);
+  
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
   
   const stmt = db.prepare(`
     INSERT INTO readiness_barriers (
-      id, patient_id, barrier_type, status, risk_level, owning_role,
+      id, org_id, patient_id, barrier_type, status, risk_level, owning_role,
       identified_date, target_resolution_date, notes, created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   stmt.run(
     id,
+    orgId,
     data.patient_id,
     data.barrier_type,
     data.status || 'open',
@@ -122,59 +154,64 @@ function createBarrier(data, userId) {
     now
   );
   
-  return getBarrierById(id);
+  return getBarrierById(id, orgId);
 }
 
 /**
- * Get barrier by ID
+ * Get barrier by ID (org-scoped)
  */
-function getBarrierById(id) {
+function getBarrierById(id, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
-  return db.prepare('SELECT * FROM readiness_barriers WHERE id = ?').get(id);
+  return db.prepare('SELECT * FROM readiness_barriers WHERE id = ? AND org_id = ?').get(id, orgId);
 }
 
 /**
- * Get all barriers for a patient
+ * Get all barriers for a patient (org-scoped)
  */
-function getBarriersByPatientId(patientId, includeResolved = false) {
+function getBarriersByPatientId(patientId, orgId, includeResolved = false) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
-  let query = 'SELECT * FROM readiness_barriers WHERE patient_id = ?';
+  let query = 'SELECT * FROM readiness_barriers WHERE patient_id = ? AND org_id = ?';
   if (!includeResolved) {
     query += " AND status != 'resolved'";
   }
   query += ' ORDER BY risk_level DESC, created_at DESC';
   
-  return db.prepare(query).all(patientId);
+  return db.prepare(query).all(patientId, orgId);
 }
 
 /**
- * Get all open barriers across all patients
+ * Get all open barriers across all patients (org-scoped)
  */
-function getAllOpenBarriers() {
+function getAllOpenBarriers(orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
   const query = `
     SELECT rb.*, p.first_name, p.last_name, p.patient_id as mrn
     FROM readiness_barriers rb
     JOIN patients p ON rb.patient_id = p.id
-    WHERE rb.status IN ('open', 'in_progress')
+    WHERE rb.org_id = ? AND p.org_id = ?
+      AND rb.status IN ('open', 'in_progress')
     ORDER BY rb.risk_level DESC, rb.created_at DESC
   `;
   
-  return db.prepare(query).all();
+  return db.prepare(query).all(orgId, orgId);
 }
 
 /**
- * Update a barrier
+ * Update a barrier (org-scoped)
  */
-function updateBarrier(id, data, userId) {
+function updateBarrier(id, data, userId, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const now = new Date().toISOString();
   
-  const existing = getBarrierById(id);
+  const existing = getBarrierById(id, orgId);
   if (!existing) {
-    throw new Error('Barrier not found');
+    throw new Error('Barrier not found or access denied');
   }
   
   // If resolving, set resolved_date
@@ -196,7 +233,7 @@ function updateBarrier(id, data, userId) {
       notes = ?,
       updated_at = ?,
       updated_by = ?
-    WHERE id = ?
+    WHERE id = ? AND org_id = ?
   `);
   
   stmt.run(
@@ -209,29 +246,37 @@ function updateBarrier(id, data, userId) {
     data.notes !== undefined ? data.notes : existing.notes,
     now,
     userId,
-    id
+    id,
+    orgId
   );
   
-  return getBarrierById(id);
+  return getBarrierById(id, orgId);
 }
 
 /**
- * Delete a barrier (soft delete via status or hard delete)
- * For audit compliance, prefer updating status to 'resolved' rather than deleting
+ * Delete a barrier (org-scoped)
  */
-function deleteBarrier(id) {
-  const db = getDatabase();
-  const stmt = db.prepare('DELETE FROM readiness_barriers WHERE id = ?');
-  return stmt.run(id);
-}
-
-/**
- * Get barrier summary for a patient
- */
-function getPatientBarrierSummary(patientId) {
+function deleteBarrier(id, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
-  const barriers = getBarriersByPatientId(patientId, false);
+  // Verify barrier exists and belongs to org
+  const existing = getBarrierById(id, orgId);
+  if (!existing) {
+    throw new Error('Barrier not found or access denied');
+  }
+  
+  const stmt = db.prepare('DELETE FROM readiness_barriers WHERE id = ? AND org_id = ?');
+  return stmt.run(id, orgId);
+}
+
+/**
+ * Get barrier summary for a patient (org-scoped)
+ */
+function getPatientBarrierSummary(patientId, orgId) {
+  requireOrgId(orgId);
+  
+  const barriers = getBarriersByPatientId(patientId, orgId, false);
   
   const summary = {
     patientId,
@@ -262,18 +307,19 @@ function getPatientBarrierSummary(patientId) {
 }
 
 /**
- * Get barriers dashboard metrics
+ * Get barriers dashboard metrics (org-scoped)
  */
-function getBarriersDashboard() {
+function getBarriersDashboard(orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
-  // Get all open/in-progress barriers
-  const allBarriers = getAllOpenBarriers();
+  // Get all open/in-progress barriers for this org
+  const allBarriers = getAllOpenBarriers(orgId);
   
-  // Get count of active patients
+  // Get count of active patients for this org
   const activePatients = db.prepare(
-    "SELECT COUNT(*) as count FROM patients WHERE waitlist_status = 'active'"
-  ).get();
+    "SELECT COUNT(*) as count FROM patients WHERE org_id = ? AND waitlist_status = 'active'"
+  ).get(orgId);
   
   // Get unique patients with barriers
   const patientsWithBarriers = new Set(allBarriers.map(b => b.patient_id));
@@ -378,18 +424,19 @@ function getTopBarrierPatients(allBarriers) {
 }
 
 /**
- * Get audit history for barriers (for compliance views)
+ * Get audit history for barriers (org-scoped)
  */
-function getBarrierAuditHistory(patientId = null, startDate = null, endDate = null) {
+function getBarrierAuditHistory(orgId, patientId = null, startDate = null, endDate = null) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
   let query = `
     SELECT al.* 
     FROM audit_logs al
-    WHERE al.entity_type = 'ReadinessBarrier'
+    WHERE al.org_id = ? AND al.entity_type = 'ReadinessBarrier'
   `;
   
-  const params = [];
+  const params = [orgId];
   
   if (patientId) {
     // Filter by patient - need to check details JSON
@@ -398,16 +445,16 @@ function getBarrierAuditHistory(patientId = null, startDate = null, endDate = nu
   }
   
   if (startDate) {
-    query += ` AND al.created_date >= ?`;
+    query += ` AND al.created_at >= ?`;
     params.push(startDate);
   }
   
   if (endDate) {
-    query += ` AND al.created_date <= ?`;
+    query += ` AND al.created_at <= ?`;
     params.push(endDate);
   }
   
-  query += ' ORDER BY al.created_date DESC LIMIT 500';
+  query += ' ORDER BY al.created_at DESC LIMIT 500';
   
   return db.prepare(query).all(...params);
 }
@@ -419,7 +466,7 @@ module.exports = {
   BARRIER_RISK_LEVEL,
   OWNING_ROLES,
   
-  // CRUD operations
+  // CRUD operations (all require orgId)
   createBarrier,
   getBarrierById,
   getBarriersByPatientId,
@@ -427,10 +474,10 @@ module.exports = {
   updateBarrier,
   deleteBarrier,
   
-  // Summaries and dashboards
+  // Summaries and dashboards (all require orgId)
   getPatientBarrierSummary,
   getBarriersDashboard,
   
-  // Audit
+  // Audit (requires orgId)
   getBarrierAuditHistory,
 };

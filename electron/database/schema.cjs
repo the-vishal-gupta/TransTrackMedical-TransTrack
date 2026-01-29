@@ -120,6 +120,28 @@ function createSchema(db) {
   `);
 
   // =========================================================================
+  // LOGIN ATTEMPTS TABLE (Security - Persisted across restarts)
+  // =========================================================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      attempt_count INTEGER DEFAULT 1,
+      last_attempt_at TEXT NOT NULL,
+      locked_until TEXT,
+      ip_address TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+  
+  // Index for efficient lockout checks
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_login_attempts_email ON login_attempts(email);
+    CREATE INDEX IF NOT EXISTS idx_login_attempts_locked ON login_attempts(locked_until);
+  `);
+
+  // =========================================================================
   // PATIENTS TABLE (Org-Scoped)
   // =========================================================================
   db.exec(`

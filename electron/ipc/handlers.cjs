@@ -92,8 +92,7 @@ function requireFeature(featureName) {
   }
 }
 
-// Failed login tracking for account lockout
-const failedLoginAttempts = new Map(); // email -> { count, lastAttempt, lockedUntil }
+// Login security constants
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours (reduced from 24 for security)
@@ -158,23 +157,36 @@ function validatePasswordStrength(password) {
 
 /**
  * Check if account is locked due to failed login attempts
+ * Uses database for persistence across application restarts
  * @param {string} email - The email to check
  * @returns {{ locked: boolean, remainingTime: number }}
  */
 function checkAccountLockout(email) {
-  const attempts = failedLoginAttempts.get(email);
-  if (!attempts) return { locked: false, remainingTime: 0 };
+  const db = getDatabase();
+  const normalizedEmail = email.toLowerCase().trim();
   
-  if (attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
-    return { 
-      locked: true, 
-      remainingTime: Math.ceil((attempts.lockedUntil - Date.now()) / 1000 / 60) // minutes
-    };
-  }
+  const attempt = db.prepare(`
+    SELECT * FROM login_attempts WHERE email = ?
+  `).get(normalizedEmail);
   
-  // Reset if lockout has expired
-  if (attempts.lockedUntil && Date.now() >= attempts.lockedUntil) {
-    failedLoginAttempts.delete(email);
+  if (!attempt) return { locked: false, remainingTime: 0 };
+  
+  if (attempt.locked_until) {
+    const lockedUntil = new Date(attempt.locked_until).getTime();
+    const now = Date.now();
+    
+    if (now < lockedUntil) {
+      return { 
+        locked: true, 
+        remainingTime: Math.ceil((lockedUntil - now) / 1000 / 60) // minutes
+      };
+    }
+    
+    // Lockout has expired - clear it
+    db.prepare(`
+      UPDATE login_attempts SET attempt_count = 0, locked_until = NULL, updated_at = datetime('now')
+      WHERE email = ?
+    `).run(normalizedEmail);
     return { locked: false, remainingTime: 0 };
   }
   
@@ -182,27 +194,52 @@ function checkAccountLockout(email) {
 }
 
 /**
- * Record a failed login attempt
+ * Record a failed login attempt (persisted in database)
  * @param {string} email - The email that failed to login
+ * @param {string} ipAddress - IP address of the attempt (optional)
  */
-function recordFailedLogin(email) {
-  const attempts = failedLoginAttempts.get(email) || { count: 0, lastAttempt: null, lockedUntil: null };
-  attempts.count++;
-  attempts.lastAttempt = Date.now();
+function recordFailedLogin(email, ipAddress = null) {
+  const db = getDatabase();
+  const normalizedEmail = email.toLowerCase().trim();
+  const now = new Date().toISOString();
   
-  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-    attempts.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+  const existing = db.prepare('SELECT * FROM login_attempts WHERE email = ?').get(normalizedEmail);
+  
+  if (existing) {
+    const newCount = existing.attempt_count + 1;
+    let lockedUntil = null;
+    
+    if (newCount >= MAX_LOGIN_ATTEMPTS) {
+      lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString();
+    }
+    
+    db.prepare(`
+      UPDATE login_attempts SET 
+        attempt_count = ?, 
+        last_attempt_at = ?, 
+        locked_until = ?,
+        ip_address = COALESCE(?, ip_address),
+        updated_at = ?
+      WHERE email = ?
+    `).run(newCount, now, lockedUntil, ipAddress, now, normalizedEmail);
+  } else {
+    const id = uuidv4();
+    db.prepare(`
+      INSERT INTO login_attempts (id, email, attempt_count, last_attempt_at, ip_address, created_at, updated_at)
+      VALUES (?, ?, 1, ?, ?, ?, ?)
+    `).run(id, normalizedEmail, now, ipAddress, now, now);
   }
-  
-  failedLoginAttempts.set(email, attempts);
 }
 
 /**
- * Clear failed login attempts after successful login
+ * Clear failed login attempts after successful login (persisted in database)
  * @param {string} email - The email to clear
  */
 function clearFailedLogins(email) {
-  failedLoginAttempts.delete(email);
+  const db = getDatabase();
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  db.prepare('DELETE FROM login_attempts WHERE email = ?').run(normalizedEmail);
 }
 
 /**
@@ -1221,7 +1258,8 @@ function setupIPCHandlers() {
   });
   
   ipcMain.handle('barrier:create', async (event, data) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
     // Validate required fields
     if (!data.patient_id) throw new Error('Patient ID is required');
@@ -1233,345 +1271,242 @@ function setupIPCHandlers() {
       throw new Error('Notes must be 255 characters or less');
     }
     
-    const barrier = readinessBarriers.createBarrier(data, currentUser.id);
+    const barrier = readinessBarriers.createBarrier(data, currentUser.id, orgId);
     
-    // Get patient name for audit
-    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ?').get(data.patient_id);
+    // Get patient name for audit (org-scoped)
+    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ? AND org_id = ?').get(data.patient_id, orgId);
     const patientName = patient ? `${patient.first_name} ${patient.last_name}` : null;
     
     logAudit(
-      'create',
-      'ReadinessBarrier',
-      barrier.id,
-      patientName,
-      JSON.stringify({
-        patient_id: data.patient_id,
-        barrier_type: data.barrier_type,
-        status: barrier.status,
-        risk_level: barrier.risk_level,
-        owning_role: barrier.owning_role,
-      }),
-      currentUser.email,
-      currentUser.role
+      'create', 'ReadinessBarrier', barrier.id, patientName,
+      JSON.stringify({ patient_id: data.patient_id, barrier_type: data.barrier_type, status: barrier.status, risk_level: barrier.risk_level }),
+      currentUser.email, currentUser.role
     );
     
     return barrier;
   });
   
   ipcMain.handle('barrier:update', async (event, id, data) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    const existing = readinessBarriers.getBarrierById(id);
-    if (!existing) throw new Error('Barrier not found');
+    const existing = readinessBarriers.getBarrierById(id, orgId);
+    if (!existing) throw new Error('Barrier not found or access denied');
     
     // Validate notes length
     if (data.notes && data.notes.length > 255) {
       throw new Error('Notes must be 255 characters or less');
     }
     
-    const barrier = readinessBarriers.updateBarrier(id, data, currentUser.id);
+    const barrier = readinessBarriers.updateBarrier(id, data, currentUser.id, orgId);
     
     // Get patient name for audit
-    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ?').get(existing.patient_id);
+    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ? AND org_id = ?').get(existing.patient_id, orgId);
     const patientName = patient ? `${patient.first_name} ${patient.last_name}` : null;
     
-    // Log what changed
     const changes = {};
     if (data.status && data.status !== existing.status) changes.status = { from: existing.status, to: data.status };
     if (data.risk_level && data.risk_level !== existing.risk_level) changes.risk_level = { from: existing.risk_level, to: data.risk_level };
-    if (data.barrier_type && data.barrier_type !== existing.barrier_type) changes.barrier_type = { from: existing.barrier_type, to: data.barrier_type };
     
-    logAudit(
-      'update',
-      'ReadinessBarrier',
-      id,
-      patientName,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        changes,
-      }),
-      currentUser.email,
-      currentUser.role
-    );
+    logAudit('update', 'ReadinessBarrier', id, patientName, JSON.stringify({ patient_id: existing.patient_id, changes }), currentUser.email, currentUser.role);
     
     return barrier;
   });
   
   ipcMain.handle('barrier:resolve', async (event, id) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    const existing = readinessBarriers.getBarrierById(id);
-    if (!existing) throw new Error('Barrier not found');
+    const existing = readinessBarriers.getBarrierById(id, orgId);
+    if (!existing) throw new Error('Barrier not found or access denied');
     
-    const barrier = readinessBarriers.updateBarrier(id, { status: 'resolved' }, currentUser.id);
+    const barrier = readinessBarriers.updateBarrier(id, { status: 'resolved' }, currentUser.id, orgId);
     
-    // Get patient name for audit
-    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ?').get(existing.patient_id);
+    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ? AND org_id = ?').get(existing.patient_id, orgId);
     const patientName = patient ? `${patient.first_name} ${patient.last_name}` : null;
     
-    logAudit(
-      'resolve',
-      'ReadinessBarrier',
-      id,
-      patientName,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        barrier_type: existing.barrier_type,
-        resolved_by: currentUser.email,
-      }),
-      currentUser.email,
-      currentUser.role
-    );
+    logAudit('resolve', 'ReadinessBarrier', id, patientName, JSON.stringify({ patient_id: existing.patient_id, barrier_type: existing.barrier_type }), currentUser.email, currentUser.role);
     
     return barrier;
   });
   
   ipcMain.handle('barrier:delete', async (event, id) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    // Only admins can delete barriers (prefer resolving instead)
     if (currentUser.role !== 'admin') {
       throw new Error('Only administrators can delete barriers. Consider resolving the barrier instead.');
     }
     
-    const existing = readinessBarriers.getBarrierById(id);
-    if (!existing) throw new Error('Barrier not found');
+    const existing = readinessBarriers.getBarrierById(id, orgId);
+    if (!existing) throw new Error('Barrier not found or access denied');
     
-    // Get patient name for audit
-    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ?').get(existing.patient_id);
+    const patient = db.prepare('SELECT first_name, last_name FROM patients WHERE id = ? AND org_id = ?').get(existing.patient_id, orgId);
     const patientName = patient ? `${patient.first_name} ${patient.last_name}` : null;
     
-    readinessBarriers.deleteBarrier(id);
+    readinessBarriers.deleteBarrier(id, orgId);
     
-    logAudit(
-      'delete',
-      'ReadinessBarrier',
-      id,
-      patientName,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        barrier_type: existing.barrier_type,
-        deleted_by: currentUser.email,
-      }),
-      currentUser.email,
-      currentUser.role
-    );
+    logAudit('delete', 'ReadinessBarrier', id, patientName, JSON.stringify({ patient_id: existing.patient_id, barrier_type: existing.barrier_type }), currentUser.email, currentUser.role);
     
     return { success: true };
   });
   
   ipcMain.handle('barrier:getByPatient', async (event, patientId, includeResolved = false) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return readinessBarriers.getBarriersByPatientId(patientId, includeResolved);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return readinessBarriers.getBarriersByPatientId(patientId, getSessionOrgId(), includeResolved);
   });
   
   ipcMain.handle('barrier:getPatientSummary', async (event, patientId) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return readinessBarriers.getPatientBarrierSummary(patientId);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return readinessBarriers.getPatientBarrierSummary(patientId, getSessionOrgId());
   });
   
   ipcMain.handle('barrier:getAllOpen', async () => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return readinessBarriers.getAllOpenBarriers();
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return readinessBarriers.getAllOpenBarriers(getSessionOrgId());
   });
   
   ipcMain.handle('barrier:getDashboard', async () => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return readinessBarriers.getBarriersDashboard();
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return readinessBarriers.getBarriersDashboard(getSessionOrgId());
   });
   
   ipcMain.handle('barrier:getAuditHistory', async (event, patientId, startDate, endDate) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return readinessBarriers.getBarrierAuditHistory(patientId, startDate, endDate);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return readinessBarriers.getBarrierAuditHistory(getSessionOrgId(), patientId, startDate, endDate);
   });
   
   // ===== ADULT HEALTH HISTORY QUESTIONNAIRE (aHHQ) =====
   // NOTE: This feature is strictly NON-CLINICAL, NON-ALLOCATIVE, and designed for
-  // OPERATIONAL DOCUMENTATION purposes only. It tracks whether required health history
-  // questionnaires are present, complete, and current. It does NOT store medical narratives,
-  // clinical interpretations, or eligibility determinations.
+  // OPERATIONAL DOCUMENTATION purposes only. All operations are org-scoped.
   
-  // Get aHHQ constants
-  ipcMain.handle('ahhq:getStatuses', async () => {
-    return ahhqService.AHHQ_STATUS;
-  });
+  ipcMain.handle('ahhq:getStatuses', async () => ahhqService.AHHQ_STATUS);
+  ipcMain.handle('ahhq:getIssues', async () => ahhqService.AHHQ_ISSUES);
+  ipcMain.handle('ahhq:getOwningRoles', async () => ahhqService.AHHQ_OWNING_ROLES);
   
-  ipcMain.handle('ahhq:getIssues', async () => {
-    return ahhqService.AHHQ_ISSUES;
-  });
-  
-  ipcMain.handle('ahhq:getOwningRoles', async () => {
-    return ahhqService.AHHQ_OWNING_ROLES;
-  });
-  
-  // Create aHHQ record
   ipcMain.handle('ahhq:create', async (event, data) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    // Validate notes length
-    if (data.notes && data.notes.length > 255) {
-      throw new Error('Notes must be 255 characters or less');
-    }
+    if (data.notes && data.notes.length > 255) throw new Error('Notes must be 255 characters or less');
     
-    const result = ahhqService.createAHHQ(data, currentUser.id);
-    
-    // Audit log
-    logAudit('create', 'AdultHealthHistoryQuestionnaire', result.id, null, 
-      JSON.stringify({
-        patient_id: data.patient_id,
-        status: data.status,
-        owning_role: data.owning_role,
-        note: 'aHHQ record created (operational documentation tracking only)',
-      }),
+    const result = ahhqService.createAHHQ(data, currentUser.id, orgId);
+    logAudit('create', 'AdultHealthHistoryQuestionnaire', result.id, null,
+      JSON.stringify({ patient_id: data.patient_id, status: data.status }),
       currentUser.email, currentUser.role);
-    
     return result;
   });
   
-  // Get aHHQ by ID
   ipcMain.handle('ahhq:getById', async (event, id) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getAHHQById(id);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getAHHQById(id, getSessionOrgId());
   });
   
-  // Get aHHQ for patient
   ipcMain.handle('ahhq:getByPatient', async (event, patientId) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getAHHQByPatientId(patientId);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getAHHQByPatientId(patientId, getSessionOrgId());
   });
   
-  // Get patient aHHQ summary
   ipcMain.handle('ahhq:getPatientSummary', async (event, patientId) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getPatientAHHQSummary(patientId);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getPatientAHHQSummary(patientId, getSessionOrgId());
   });
   
-  // Get all aHHQs with filters
   ipcMain.handle('ahhq:getAll', async (event, filters) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getAllAHHQs(filters);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getAllAHHQs(getSessionOrgId(), filters);
   });
   
-  // Get expiring aHHQs
   ipcMain.handle('ahhq:getExpiring', async (event, days) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getExpiringAHHQs(days);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getExpiringAHHQs(getSessionOrgId(), days);
   });
   
-  // Get expired aHHQs
   ipcMain.handle('ahhq:getExpired', async () => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getExpiredAHHQs();
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getExpiredAHHQs(getSessionOrgId());
   });
   
-  // Get incomplete aHHQs
   ipcMain.handle('ahhq:getIncomplete', async () => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getIncompleteAHHQs();
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getIncompleteAHHQs(getSessionOrgId());
   });
   
-  // Update aHHQ
   ipcMain.handle('ahhq:update', async (event, id, data) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    // Validate notes length
-    if (data.notes && data.notes.length > 255) {
-      throw new Error('Notes must be 255 characters or less');
-    }
+    if (data.notes && data.notes.length > 255) throw new Error('Notes must be 255 characters or less');
     
-    const existing = ahhqService.getAHHQById(id);
-    const result = ahhqService.updateAHHQ(id, data, currentUser.id);
+    const existing = ahhqService.getAHHQById(id, orgId);
+    if (!existing) throw new Error('aHHQ not found or access denied');
     
-    // Audit log with changes
+    const result = ahhqService.updateAHHQ(id, data, currentUser.id, orgId);
+    
     const changes = {};
-    if (data.status !== undefined && data.status !== existing.status) {
-      changes.status = { from: existing.status, to: data.status };
-    }
-    if (data.owning_role !== undefined && data.owning_role !== existing.owning_role) {
-      changes.owning_role = { from: existing.owning_role, to: data.owning_role };
-    }
+    if (data.status !== undefined && data.status !== existing.status) changes.status = { from: existing.status, to: data.status };
     
     logAudit('update', 'AdultHealthHistoryQuestionnaire', id, null,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        changes,
-        note: 'aHHQ record updated (operational documentation tracking only)',
-      }),
+      JSON.stringify({ patient_id: existing.patient_id, changes }),
       currentUser.email, currentUser.role);
-    
     return result;
   });
   
-  // Mark aHHQ complete
   ipcMain.handle('ahhq:markComplete', async (event, id, completedDate) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    const existing = ahhqService.getAHHQById(id);
-    const result = ahhqService.markAHHQComplete(id, completedDate, currentUser.id);
+    const existing = ahhqService.getAHHQById(id, orgId);
+    if (!existing) throw new Error('aHHQ not found or access denied');
     
+    const result = ahhqService.markAHHQComplete(id, completedDate, currentUser.id, orgId);
     logAudit('complete', 'AdultHealthHistoryQuestionnaire', id, null,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        completed_date: completedDate || new Date().toISOString(),
-        expiration_date: result.expiration_date,
-        note: 'aHHQ marked complete (operational documentation tracking only)',
-      }),
+      JSON.stringify({ patient_id: existing.patient_id, completed_date: completedDate || new Date().toISOString() }),
       currentUser.email, currentUser.role);
-    
     return result;
   });
   
-  // Mark aHHQ as requiring follow-up
   ipcMain.handle('ahhq:markFollowUpRequired', async (event, id, issues) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    const orgId = getSessionOrgId();
     
-    const existing = ahhqService.getAHHQById(id);
-    const result = ahhqService.markAHHQFollowUpRequired(id, issues, currentUser.id);
+    const existing = ahhqService.getAHHQById(id, orgId);
+    if (!existing) throw new Error('aHHQ not found or access denied');
     
+    const result = ahhqService.markAHHQFollowUpRequired(id, issues, currentUser.id, orgId);
     logAudit('follow_up_required', 'AdultHealthHistoryQuestionnaire', id, null,
-      JSON.stringify({
-        patient_id: existing.patient_id,
-        issues: issues,
-        note: 'aHHQ marked as requiring follow-up (operational documentation tracking only)',
-      }),
+      JSON.stringify({ patient_id: existing.patient_id, issues }),
       currentUser.email, currentUser.role);
-    
     return result;
   });
   
-  // Delete aHHQ
   ipcMain.handle('ahhq:delete', async (event, id) => {
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
     if (currentUser.role !== 'admin') throw new Error('Admin access required');
+    const orgId = getSessionOrgId();
     
-    const existing = ahhqService.getAHHQById(id);
+    const existing = ahhqService.getAHHQById(id, orgId);
+    if (!existing) throw new Error('aHHQ not found or access denied');
     
     logAudit('delete', 'AdultHealthHistoryQuestionnaire', id, null,
-      JSON.stringify({
-        patient_id: existing?.patient_id,
-        note: 'aHHQ record deleted (operational documentation tracking only)',
-      }),
+      JSON.stringify({ patient_id: existing.patient_id }),
       currentUser.email, currentUser.role);
-    
-    return ahhqService.deleteAHHQ(id);
+    return ahhqService.deleteAHHQ(id, orgId);
   });
   
-  // Get aHHQ dashboard metrics
   ipcMain.handle('ahhq:getDashboard', async () => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getAHHQDashboard();
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getAHHQDashboard(getSessionOrgId());
   });
   
-  // Get patients with aHHQ issues
   ipcMain.handle('ahhq:getPatientsWithIssues', async (event, limit) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getPatientsWithAHHQIssues(limit);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getPatientsWithAHHQIssues(getSessionOrgId(), limit);
   });
   
-  // Get aHHQ audit history
   ipcMain.handle('ahhq:getAuditHistory', async (event, patientId, startDate, endDate) => {
-    if (!currentUser) throw new Error('Not authenticated');
-    return ahhqService.getAHHQAuditHistory(patientId, startDate, endDate);
+    if (!validateSession()) throw new Error('Session expired. Please log in again.');
+    return ahhqService.getAHHQAuditHistory(getSessionOrgId(), patientId, startDate, endDate);
   });
   
   // ===== ACCESS CONTROL WITH JUSTIFICATION =====

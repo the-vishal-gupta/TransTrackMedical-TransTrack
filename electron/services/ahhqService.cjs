@@ -7,12 +7,9 @@
  * This service is strictly NON-CLINICAL, NON-ALLOCATIVE, and designed for
  * OPERATIONAL DOCUMENTATION purposes only.
  * 
- * It answers:
- * - Is the aHHQ present?
- * - Is it complete?
- * - Is it current?
- * - Is it approaching expiration?
- * - Is follow-up required?
+ * SECURITY:
+ * All functions require org_id for organization isolation.
+ * Queries always include org_id filtering to prevent cross-org access.
  * 
  * It does NOT:
  * - Store medical narratives
@@ -30,9 +27,6 @@ const { v4: uuidv4 } = require('uuid');
 // CONSTANTS
 // =============================================================================
 
-/**
- * aHHQ Status values
- */
 const AHHQ_STATUS = {
   COMPLETE: 'complete',
   INCOMPLETE: 'incomplete',
@@ -40,46 +34,15 @@ const AHHQ_STATUS = {
   EXPIRED: 'expired',
 };
 
-/**
- * Identified issues that can flag an aHHQ
- * These are operational documentation issues, NOT clinical findings
- */
 const AHHQ_ISSUES = {
-  MISSING_SECTIONS: {
-    value: 'MISSING_SECTIONS',
-    label: 'Missing sections',
-    description: 'One or more required sections are incomplete',
-  },
-  OUTDATED_INFORMATION: {
-    value: 'OUTDATED_INFORMATION',
-    label: 'Outdated information',
-    description: 'Information needs to be reviewed and updated',
-  },
-  FOLLOW_UP_REQUIRED: {
-    value: 'FOLLOW_UP_REQUIRED',
-    label: 'Follow-up required',
-    description: 'Additional documentation or follow-up is needed',
-  },
-  DOCUMENTATION_PENDING: {
-    value: 'DOCUMENTATION_PENDING',
-    label: 'Documentation pending',
-    description: 'Supporting documentation has been requested',
-  },
-  SIGNATURE_REQUIRED: {
-    value: 'SIGNATURE_REQUIRED',
-    label: 'Signature required',
-    description: 'Patient or provider signature is needed',
-  },
-  VERIFICATION_NEEDED: {
-    value: 'VERIFICATION_NEEDED',
-    label: 'Verification needed',
-    description: 'Information requires verification',
-  },
+  MISSING_SECTIONS: { value: 'MISSING_SECTIONS', label: 'Missing sections' },
+  OUTDATED_INFORMATION: { value: 'OUTDATED_INFORMATION', label: 'Outdated information' },
+  FOLLOW_UP_REQUIRED: { value: 'FOLLOW_UP_REQUIRED', label: 'Follow-up required' },
+  DOCUMENTATION_PENDING: { value: 'DOCUMENTATION_PENDING', label: 'Documentation pending' },
+  SIGNATURE_REQUIRED: { value: 'SIGNATURE_REQUIRED', label: 'Signature required' },
+  VERIFICATION_NEEDED: { value: 'VERIFICATION_NEEDED', label: 'Verification needed' },
 };
 
-/**
- * Owning roles for aHHQ management
- */
 const AHHQ_OWNING_ROLES = {
   COORDINATOR: { value: 'coordinator', label: 'Transplant Coordinator' },
   SOCIAL_WORK: { value: 'social_work', label: 'Social Work' },
@@ -87,100 +50,78 @@ const AHHQ_OWNING_ROLES = {
   OTHER: { value: 'other', label: 'Other' },
 };
 
-/**
- * Default validity period in days
- */
 const DEFAULT_VALIDITY_DAYS = 365;
-
-/**
- * Warning threshold - days before expiration to trigger warning
- */
 const EXPIRATION_WARNING_DAYS = 30;
+
+// =============================================================================
+// ORG ISOLATION HELPERS
+// =============================================================================
+
+function requireOrgId(orgId) {
+  if (!orgId) {
+    throw new Error('Organization context required for aHHQ operations');
+  }
+  return orgId;
+}
+
+function verifyPatientOrg(patientId, orgId) {
+  const db = getDatabase();
+  const patient = db.prepare('SELECT id FROM patients WHERE id = ? AND org_id = ?').get(patientId, orgId);
+  if (!patient) {
+    throw new Error('Patient not found or access denied');
+  }
+  return true;
+}
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
-/**
- * Calculate expiration date from completion date
- */
 function calculateExpirationDate(completedDate, validityDays = DEFAULT_VALIDITY_DAYS) {
   const date = new Date(completedDate);
   date.setDate(date.getDate() + validityDays);
   return date.toISOString();
 }
 
-/**
- * Check if aHHQ is expiring soon
- */
 function isExpiringSoon(expirationDate, warningDays = EXPIRATION_WARNING_DAYS) {
   if (!expirationDate) return false;
-  
   const expiry = new Date(expirationDate);
   const now = new Date();
   const daysUntilExpiry = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
-  
   return daysUntilExpiry > 0 && daysUntilExpiry <= warningDays;
 }
 
-/**
- * Check if aHHQ is expired
- */
 function isExpired(expirationDate) {
   if (!expirationDate) return false;
-  
-  const expiry = new Date(expirationDate);
-  const now = new Date();
-  
-  return now > expiry;
+  return new Date() > new Date(expirationDate);
 }
 
-/**
- * Get days until expiration
- */
 function getDaysUntilExpiration(expirationDate) {
   if (!expirationDate) return null;
-  
-  const expiry = new Date(expirationDate);
-  const now = new Date();
-  const days = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
-  
-  return days;
+  return Math.floor((new Date(expirationDate) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
-/**
- * Parse identified issues from JSON string
- */
 function parseIssues(issuesJson) {
   if (!issuesJson) return [];
-  try {
-    return JSON.parse(issuesJson);
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(issuesJson); } catch { return []; }
 }
 
-/**
- * Stringify identified issues to JSON
- */
 function stringifyIssues(issues) {
-  if (!issues || !Array.isArray(issues)) return null;
-  if (issues.length === 0) return null;
+  if (!issues || !Array.isArray(issues) || issues.length === 0) return null;
   return JSON.stringify(issues);
 }
 
 // =============================================================================
-// CRUD OPERATIONS
+// CRUD OPERATIONS (Org-Scoped)
 // =============================================================================
 
-/**
- * Create a new aHHQ record for a patient
- */
-function createAHHQ(data, userId) {
+function createAHHQ(data, userId, orgId) {
+  requireOrgId(orgId);
+  verifyPatientOrg(data.patient_id, orgId);
+  
   const db = getDatabase();
   const id = uuidv4();
   
-  // Calculate expiration date if completing
   let expirationDate = data.expiration_date || null;
   if (data.status === AHHQ_STATUS.COMPLETE && data.last_completed_date && !expirationDate) {
     expirationDate = calculateExpirationDate(
@@ -191,15 +132,14 @@ function createAHHQ(data, userId) {
   
   const stmt = db.prepare(`
     INSERT INTO adult_health_history_questionnaires (
-      id, patient_id, status, last_completed_date, expiration_date,
+      id, org_id, patient_id, status, last_completed_date, expiration_date,
       validity_period_days, identified_issues, owning_role, notes,
       created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
   `);
   
   stmt.run(
-    id,
-    data.patient_id,
+    id, orgId, data.patient_id,
     data.status || AHHQ_STATUS.INCOMPLETE,
     data.last_completed_date || null,
     expirationDate,
@@ -210,20 +150,18 @@ function createAHHQ(data, userId) {
     userId
   );
   
-  return getAHHQById(id);
+  return getAHHQById(id, orgId);
 }
 
-/**
- * Get aHHQ by ID
- */
-function getAHHQById(id) {
+function getAHHQById(id, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const row = db.prepare(`
     SELECT a.*, p.first_name || ' ' || p.last_name as patient_name
     FROM adult_health_history_questionnaires a
     LEFT JOIN patients p ON a.patient_id = p.id
-    WHERE a.id = ?
-  `).get(id);
+    WHERE a.id = ? AND a.org_id = ?
+  `).get(id, orgId);
   
   if (row) {
     row.identified_issues = parseIssues(row.identified_issues);
@@ -235,17 +173,14 @@ function getAHHQById(id) {
   return row;
 }
 
-/**
- * Get aHHQ for a patient
- */
-function getAHHQByPatientId(patientId) {
+function getAHHQByPatientId(patientId, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const row = db.prepare(`
     SELECT * FROM adult_health_history_questionnaires
-    WHERE patient_id = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-  `).get(patientId);
+    WHERE patient_id = ? AND org_id = ?
+    ORDER BY created_at DESC LIMIT 1
+  `).get(patientId, orgId);
   
   if (row) {
     row.identified_issues = parseIssues(row.identified_issues);
@@ -257,19 +192,17 @@ function getAHHQByPatientId(patientId) {
   return row;
 }
 
-/**
- * Get all aHHQs with filters
- */
-function getAllAHHQs(filters = {}) {
+function getAllAHHQs(orgId, filters = {}) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
   let query = `
     SELECT a.*, p.first_name || ' ' || p.last_name as patient_name
     FROM adult_health_history_questionnaires a
     LEFT JOIN patients p ON a.patient_id = p.id
-    WHERE 1=1
+    WHERE a.org_id = ?
   `;
-  const params = [];
+  const params = [orgId];
   
   if (filters.status) {
     query += ` AND a.status = ?`;
@@ -299,26 +232,22 @@ function getAllAHHQs(filters = {}) {
   }));
 }
 
-/**
- * Get aHHQs expiring within specified days
- */
-function getExpiringAHHQs(days = EXPIRATION_WARNING_DAYS) {
+function getExpiringAHHQs(orgId, days = EXPIRATION_WARNING_DAYS) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const now = new Date().toISOString();
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + days);
-  const futureDateStr = futureDate.toISOString();
   
   const rows = db.prepare(`
     SELECT a.*, p.first_name || ' ' || p.last_name as patient_name
     FROM adult_health_history_questionnaires a
     LEFT JOIN patients p ON a.patient_id = p.id
-    WHERE a.status = 'complete'
+    WHERE a.org_id = ? AND a.status = 'complete'
     AND a.expiration_date IS NOT NULL
-    AND a.expiration_date > ?
-    AND a.expiration_date <= ?
+    AND a.expiration_date > ? AND a.expiration_date <= ?
     ORDER BY a.expiration_date ASC
-  `).all(now, futureDateStr);
+  `).all(orgId, now, futureDate.toISOString());
   
   return rows.map(row => ({
     ...row,
@@ -329,10 +258,8 @@ function getExpiringAHHQs(days = EXPIRATION_WARNING_DAYS) {
   }));
 }
 
-/**
- * Get expired aHHQs
- */
-function getExpiredAHHQs() {
+function getExpiredAHHQs(orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const now = new Date().toISOString();
   
@@ -340,9 +267,9 @@ function getExpiredAHHQs() {
     SELECT a.*, p.first_name || ' ' || p.last_name as patient_name
     FROM adult_health_history_questionnaires a
     LEFT JOIN patients p ON a.patient_id = p.id
-    WHERE (a.status = 'expired' OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?))
+    WHERE a.org_id = ? AND (a.status = 'expired' OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?))
     ORDER BY a.expiration_date ASC
-  `).all(now);
+  `).all(orgId, now);
   
   return rows.map(row => ({
     ...row,
@@ -353,19 +280,17 @@ function getExpiredAHHQs() {
   }));
 }
 
-/**
- * Get incomplete aHHQs
- */
-function getIncompleteAHHQs() {
+function getIncompleteAHHQs(orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
   const rows = db.prepare(`
     SELECT a.*, p.first_name || ' ' || p.last_name as patient_name
     FROM adult_health_history_questionnaires a
     LEFT JOIN patients p ON a.patient_id = p.id
-    WHERE a.status IN ('incomplete', 'pending_update')
+    WHERE a.org_id = ? AND a.status IN ('incomplete', 'pending_update')
     ORDER BY a.created_at DESC
-  `).all();
+  `).all(orgId);
   
   return rows.map(row => ({
     ...row,
@@ -376,18 +301,15 @@ function getIncompleteAHHQs() {
   }));
 }
 
-/**
- * Update aHHQ record
- */
-function updateAHHQ(id, data, userId) {
+function updateAHHQ(id, data, userId, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
-  const existing = getAHHQById(id);
+  const existing = getAHHQById(id, orgId);
   
   if (!existing) {
-    throw new Error('aHHQ record not found');
+    throw new Error('aHHQ record not found or access denied');
   }
   
-  // Calculate new expiration date if completing
   let expirationDate = data.expiration_date !== undefined ? data.expiration_date : existing.expiration_date;
   if (data.status === AHHQ_STATUS.COMPLETE && data.last_completed_date) {
     expirationDate = calculateExpirationDate(
@@ -398,16 +320,10 @@ function updateAHHQ(id, data, userId) {
   
   const stmt = db.prepare(`
     UPDATE adult_health_history_questionnaires
-    SET status = ?,
-        last_completed_date = ?,
-        expiration_date = ?,
-        validity_period_days = ?,
-        identified_issues = ?,
-        owning_role = ?,
-        notes = ?,
-        updated_at = datetime('now'),
-        updated_by = ?
-    WHERE id = ?
+    SET status = ?, last_completed_date = ?, expiration_date = ?,
+        validity_period_days = ?, identified_issues = ?, owning_role = ?,
+        notes = ?, updated_at = datetime('now'), updated_by = ?
+    WHERE id = ? AND org_id = ?
   `);
   
   stmt.run(
@@ -418,63 +334,52 @@ function updateAHHQ(id, data, userId) {
     data.identified_issues !== undefined ? stringifyIssues(data.identified_issues) : stringifyIssues(existing.identified_issues),
     data.owning_role !== undefined ? data.owning_role : existing.owning_role,
     data.notes !== undefined ? data.notes : existing.notes,
-    userId,
-    id
+    userId, id, orgId
   );
   
-  return getAHHQById(id);
+  return getAHHQById(id, orgId);
 }
 
-/**
- * Mark aHHQ as complete
- */
-function markAHHQComplete(id, completedDate, userId) {
-  const now = completedDate || new Date().toISOString();
-  
+function markAHHQComplete(id, completedDate, userId, orgId) {
   return updateAHHQ(id, {
     status: AHHQ_STATUS.COMPLETE,
-    last_completed_date: now,
-    identified_issues: [], // Clear issues on completion
-  }, userId);
+    last_completed_date: completedDate || new Date().toISOString(),
+    identified_issues: [],
+  }, userId, orgId);
 }
 
-/**
- * Mark aHHQ as requiring follow-up
- */
-function markAHHQFollowUpRequired(id, issues, userId) {
+function markAHHQFollowUpRequired(id, issues, userId, orgId) {
   return updateAHHQ(id, {
     status: AHHQ_STATUS.PENDING_UPDATE,
     identified_issues: issues || [AHHQ_ISSUES.FOLLOW_UP_REQUIRED.value],
-  }, userId);
+  }, userId, orgId);
 }
 
-/**
- * Delete aHHQ record
- */
-function deleteAHHQ(id) {
+function deleteAHHQ(id, orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
-  db.prepare('DELETE FROM adult_health_history_questionnaires WHERE id = ?').run(id);
+  
+  const existing = getAHHQById(id, orgId);
+  if (!existing) {
+    throw new Error('aHHQ record not found or access denied');
+  }
+  
+  db.prepare('DELETE FROM adult_health_history_questionnaires WHERE id = ? AND org_id = ?').run(id, orgId);
   return { success: true };
 }
 
 // =============================================================================
-// PATIENT SUMMARY
+// PATIENT SUMMARY (Org-Scoped)
 // =============================================================================
 
-/**
- * Get aHHQ summary for a patient
- */
-function getPatientAHHQSummary(patientId) {
-  const ahhq = getAHHQByPatientId(patientId);
+function getPatientAHHQSummary(patientId, orgId) {
+  requireOrgId(orgId);
+  const ahhq = getAHHQByPatientId(patientId, orgId);
   
   if (!ahhq) {
     return {
-      exists: false,
-      status: null,
-      riskLevel: 'high', // No aHHQ is a documentation gap
-      riskDescription: 'No aHHQ on file',
-      needsAttention: true,
-      ahhq: null,
+      exists: false, status: null, riskLevel: 'high',
+      riskDescription: 'No aHHQ on file', needsAttention: true, ahhq: null,
     };
   }
   
@@ -500,126 +405,80 @@ function getPatientAHHQSummary(patientId) {
     needsAttention = true;
   }
   
-  return {
-    exists: true,
-    status: ahhq.status,
-    riskLevel,
-    riskDescription,
-    needsAttention,
-    daysUntilExpiration: ahhq.days_until_expiration,
-    ahhq,
-  };
+  return { exists: true, status: ahhq.status, riskLevel, riskDescription, needsAttention, daysUntilExpiration: ahhq.days_until_expiration, ahhq };
 }
 
 // =============================================================================
-// DASHBOARD METRICS
+// DASHBOARD METRICS (Org-Scoped)
 // =============================================================================
 
-/**
- * Get aHHQ dashboard metrics for risk dashboard
- */
-function getAHHQDashboard() {
+function getAHHQDashboard(orgId) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const now = new Date().toISOString();
   const warningDate = new Date();
   warningDate.setDate(warningDate.getDate() + EXPIRATION_WARNING_DAYS);
   const warningDateStr = warningDate.toISOString();
   
-  // Get total active patients
   const totalPatients = db.prepare(`
-    SELECT COUNT(*) as count FROM patients WHERE waitlist_status = 'active'
-  `).get().count;
+    SELECT COUNT(*) as count FROM patients WHERE org_id = ? AND waitlist_status = 'active'
+  `).get(orgId).count;
   
-  // Get patients with aHHQ
   const patientsWithAHHQ = db.prepare(`
-    SELECT COUNT(DISTINCT patient_id) as count FROM adult_health_history_questionnaires
-  `).get().count;
+    SELECT COUNT(DISTINCT patient_id) as count FROM adult_health_history_questionnaires WHERE org_id = ?
+  `).get(orgId).count;
   
-  // Get complete aHHQs
   const completeCount = db.prepare(`
     SELECT COUNT(*) as count FROM adult_health_history_questionnaires
-    WHERE status = 'complete' AND (expiration_date IS NULL OR expiration_date > ?)
-  `).get(now).count;
+    WHERE org_id = ? AND status = 'complete' AND (expiration_date IS NULL OR expiration_date > ?)
+  `).get(orgId, now).count;
   
-  // Get incomplete aHHQs
   const incompleteCount = db.prepare(`
     SELECT COUNT(*) as count FROM adult_health_history_questionnaires
-    WHERE status IN ('incomplete', 'pending_update')
-  `).get().count;
+    WHERE org_id = ? AND status IN ('incomplete', 'pending_update')
+  `).get(orgId).count;
   
-  // Get expiring soon
   const expiringCount = db.prepare(`
     SELECT COUNT(*) as count FROM adult_health_history_questionnaires
-    WHERE status = 'complete'
-    AND expiration_date IS NOT NULL
-    AND expiration_date > ?
-    AND expiration_date <= ?
-  `).get(now, warningDateStr).count;
+    WHERE org_id = ? AND status = 'complete' AND expiration_date IS NOT NULL AND expiration_date > ? AND expiration_date <= ?
+  `).get(orgId, now, warningDateStr).count;
   
-  // Get expired
   const expiredCount = db.prepare(`
     SELECT COUNT(*) as count FROM adult_health_history_questionnaires
-    WHERE status = 'expired' OR (expiration_date IS NOT NULL AND expiration_date < ?)
-  `).get(now).count;
+    WHERE org_id = ? AND (status = 'expired' OR (expiration_date IS NOT NULL AND expiration_date < ?))
+  `).get(orgId, now).count;
   
-  // Get by status
   const byStatus = db.prepare(`
-    SELECT status, COUNT(*) as count
-    FROM adult_health_history_questionnaires
-    GROUP BY status
-  `).all().reduce((acc, row) => {
-    acc[row.status] = row.count;
-    return acc;
-  }, {});
+    SELECT status, COUNT(*) as count FROM adult_health_history_questionnaires WHERE org_id = ? GROUP BY status
+  `).all(orgId).reduce((acc, row) => { acc[row.status] = row.count; return acc; }, {});
   
-  // Get by owning role
   const byOwningRole = db.prepare(`
-    SELECT owning_role, COUNT(*) as count
-    FROM adult_health_history_questionnaires
-    GROUP BY owning_role
-  `).all().reduce((acc, row) => {
-    acc[row.owning_role] = row.count;
-    return acc;
-  }, {});
+    SELECT owning_role, COUNT(*) as count FROM adult_health_history_questionnaires WHERE org_id = ? GROUP BY owning_role
+  `).all(orgId).reduce((acc, row) => { acc[row.owning_role] = row.count; return acc; }, {});
   
-  // Patients needing attention (missing, incomplete, expiring, or expired)
   const patientsNeedingAttention = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT p.id FROM patients p
-      LEFT JOIN adult_health_history_questionnaires a ON p.id = a.patient_id
-      WHERE p.waitlist_status = 'active'
-      AND (
-        a.id IS NULL
-        OR a.status IN ('incomplete', 'pending_update', 'expired')
-        OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?)
-        OR (a.expiration_date IS NOT NULL AND a.expiration_date <= ?)
-      )
+      LEFT JOIN adult_health_history_questionnaires a ON p.id = a.patient_id AND a.org_id = ?
+      WHERE p.org_id = ? AND p.waitlist_status = 'active'
+      AND (a.id IS NULL OR a.status IN ('incomplete', 'pending_update', 'expired')
+           OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?)
+           OR (a.expiration_date IS NOT NULL AND a.expiration_date <= ?))
       GROUP BY p.id
     )
-  `).get(now, warningDateStr).count;
+  `).get(orgId, orgId, now, warningDateStr).count;
   
   return {
-    totalPatients,
-    patientsWithAHHQ,
-    patientsWithoutAHHQ: totalPatients - patientsWithAHHQ,
-    completeCount,
-    incompleteCount,
-    expiringCount,
-    expiredCount,
-    byStatus,
-    byOwningRole,
-    patientsNeedingAttention,
-    patientsNeedingAttentionPercentage: totalPatients > 0 
-      ? ((patientsNeedingAttention / totalPatients) * 100).toFixed(1)
-      : '0.0',
+    totalPatients, patientsWithAHHQ, patientsWithoutAHHQ: totalPatients - patientsWithAHHQ,
+    completeCount, incompleteCount, expiringCount, expiredCount,
+    byStatus, byOwningRole, patientsNeedingAttention,
+    patientsNeedingAttentionPercentage: totalPatients > 0 ? ((patientsNeedingAttention / totalPatients) * 100).toFixed(1) : '0.0',
     warningThresholdDays: EXPIRATION_WARNING_DAYS,
   };
 }
 
-/**
- * Get patients with aHHQ issues for risk drill-down
- */
-function getPatientsWithAHHQIssues(limit = 10) {
+function getPatientsWithAHHQIssues(orgId, limit = 10) {
+  requireOrgId(orgId);
   const db = getDatabase();
   const now = new Date().toISOString();
   const warningDate = new Date();
@@ -627,14 +486,8 @@ function getPatientsWithAHHQIssues(limit = 10) {
   const warningDateStr = warningDate.toISOString();
   
   const rows = db.prepare(`
-    SELECT 
-      p.id as patient_id,
-      p.first_name || ' ' || p.last_name as patient_name,
-      a.id as ahhq_id,
-      a.status,
-      a.expiration_date,
-      a.identified_issues,
-      a.owning_role,
+    SELECT p.id as patient_id, p.first_name || ' ' || p.last_name as patient_name,
+      a.id as ahhq_id, a.status, a.expiration_date, a.identified_issues, a.owning_role,
       CASE
         WHEN a.id IS NULL THEN 'missing'
         WHEN a.status = 'expired' OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?) THEN 'expired'
@@ -643,25 +496,15 @@ function getPatientsWithAHHQIssues(limit = 10) {
         ELSE 'ok'
       END as issue_type
     FROM patients p
-    LEFT JOIN adult_health_history_questionnaires a ON p.id = a.patient_id
-    WHERE p.waitlist_status = 'active'
-    AND (
-      a.id IS NULL
-      OR a.status IN ('incomplete', 'pending_update', 'expired')
-      OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?)
-      OR (a.expiration_date IS NOT NULL AND a.expiration_date <= ?)
-    )
-    ORDER BY 
-      CASE issue_type
-        WHEN 'expired' THEN 1
-        WHEN 'missing' THEN 2
-        WHEN 'incomplete' THEN 3
-        WHEN 'expiring' THEN 4
-        ELSE 5
-      END,
-      a.expiration_date ASC
+    LEFT JOIN adult_health_history_questionnaires a ON p.id = a.patient_id AND a.org_id = ?
+    WHERE p.org_id = ? AND p.waitlist_status = 'active'
+    AND (a.id IS NULL OR a.status IN ('incomplete', 'pending_update', 'expired')
+         OR (a.expiration_date IS NOT NULL AND a.expiration_date < ?)
+         OR (a.expiration_date IS NOT NULL AND a.expiration_date <= ?))
+    ORDER BY CASE issue_type WHEN 'expired' THEN 1 WHEN 'missing' THEN 2 WHEN 'incomplete' THEN 3 WHEN 'expiring' THEN 4 ELSE 5 END,
+             a.expiration_date ASC
     LIMIT ?
-  `).all(now, warningDateStr, now, warningDateStr, limit);
+  `).all(now, warningDateStr, orgId, orgId, now, warningDateStr, limit);
   
   return rows.map(row => ({
     ...row,
@@ -671,40 +514,35 @@ function getPatientsWithAHHQIssues(limit = 10) {
 }
 
 // =============================================================================
-// AUDIT HISTORY
+// AUDIT HISTORY (Org-Scoped)
 // =============================================================================
 
-/**
- * Get aHHQ audit history
- */
-function getAHHQAuditHistory(patientId = null, startDate = null, endDate = null) {
+function getAHHQAuditHistory(orgId, patientId = null, startDate = null, endDate = null) {
+  requireOrgId(orgId);
   const db = getDatabase();
   
   let query = `
     SELECT al.*, u.full_name as user_name
     FROM audit_logs al
-    LEFT JOIN users u ON al.user_email = u.email
-    WHERE al.entity_type = 'AdultHealthHistoryQuestionnaire'
+    LEFT JOIN users u ON al.user_email = u.email AND u.org_id = ?
+    WHERE al.org_id = ? AND al.entity_type = 'AdultHealthHistoryQuestionnaire'
   `;
-  const params = [];
+  const params = [orgId, orgId];
   
   if (patientId) {
     query += ` AND al.details LIKE ?`;
     params.push(`%"patient_id":"${patientId}"%`);
   }
-  
   if (startDate) {
-    query += ` AND al.timestamp >= ?`;
+    query += ` AND al.created_at >= ?`;
     params.push(startDate);
   }
-  
   if (endDate) {
-    query += ` AND al.timestamp <= ?`;
+    query += ` AND al.created_at <= ?`;
     params.push(endDate);
   }
   
-  query += ` ORDER BY al.timestamp DESC LIMIT 100`;
-  
+  query += ` ORDER BY al.created_at DESC LIMIT 100`;
   return db.prepare(query).all(...params);
 }
 
@@ -713,37 +551,9 @@ function getAHHQAuditHistory(patientId = null, startDate = null, endDate = null)
 // =============================================================================
 
 module.exports = {
-  // Constants
-  AHHQ_STATUS,
-  AHHQ_ISSUES,
-  AHHQ_OWNING_ROLES,
-  DEFAULT_VALIDITY_DAYS,
-  EXPIRATION_WARNING_DAYS,
-  
-  // Helpers
-  calculateExpirationDate,
-  isExpiringSoon,
-  isExpired,
-  getDaysUntilExpiration,
-  
-  // CRUD
-  createAHHQ,
-  getAHHQById,
-  getAHHQByPatientId,
-  getAllAHHQs,
-  getExpiringAHHQs,
-  getExpiredAHHQs,
-  getIncompleteAHHQs,
-  updateAHHQ,
-  markAHHQComplete,
-  markAHHQFollowUpRequired,
-  deleteAHHQ,
-  
-  // Summaries
-  getPatientAHHQSummary,
-  getAHHQDashboard,
-  getPatientsWithAHHQIssues,
-  
-  // Audit
-  getAHHQAuditHistory,
+  AHHQ_STATUS, AHHQ_ISSUES, AHHQ_OWNING_ROLES, DEFAULT_VALIDITY_DAYS, EXPIRATION_WARNING_DAYS,
+  calculateExpirationDate, isExpiringSoon, isExpired, getDaysUntilExpiration,
+  createAHHQ, getAHHQById, getAHHQByPatientId, getAllAHHQs, getExpiringAHHQs, getExpiredAHHQs, getIncompleteAHHQs,
+  updateAHHQ, markAHHQComplete, markAHHQFollowUpRequired, deleteAHHQ,
+  getPatientAHHQSummary, getAHHQDashboard, getPatientsWithAHHQIssues, getAHHQAuditHistory,
 };

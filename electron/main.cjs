@@ -296,6 +296,105 @@ function showLicenseRequiredDialog(message) {
   return true; // Block
 }
 
+// =========================================================================
+// PERIODIC LICENSE EXPIRATION CHECK
+// =========================================================================
+
+let licenseCheckInterval = null;
+const LICENSE_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check every hour
+const LICENSE_WARNING_DAYS = 14; // Warn when license expires in 14 days
+
+/**
+ * Check license status and warn if expiring soon
+ */
+function performPeriodicLicenseCheck() {
+  try {
+    const defaultOrg = getDefaultOrganization();
+    if (!defaultOrg) return;
+    
+    const license = getOrgLicense(defaultOrg.id);
+    if (!license) return;
+    
+    const now = new Date();
+    
+    // Check license expiration
+    if (license.license_expires_at) {
+      const expiry = new Date(license.license_expires_at);
+      const daysUntilExpiry = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntilExpiry <= 0) {
+        // License expired - send notification to renderer
+        if (mainWindow) {
+          mainWindow.webContents.send('license:expired', {
+            tier: license.tier,
+            expiredAt: license.license_expires_at,
+          });
+        }
+        console.warn(`LICENSE EXPIRED: License expired on ${expiry.toLocaleDateString()}`);
+      } else if (daysUntilExpiry <= LICENSE_WARNING_DAYS) {
+        // License expiring soon - send warning to renderer
+        if (mainWindow) {
+          mainWindow.webContents.send('license:expiring-soon', {
+            tier: license.tier,
+            expiresAt: license.license_expires_at,
+            daysRemaining: daysUntilExpiry,
+          });
+        }
+        console.warn(`LICENSE WARNING: License expires in ${daysUntilExpiry} days`);
+      }
+    }
+    
+    // Check maintenance expiration
+    if (license.maintenance_expires_at) {
+      const maintenanceExpiry = new Date(license.maintenance_expires_at);
+      const daysUntilMaintExpiry = Math.floor((maintenanceExpiry - now) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntilMaintExpiry <= 0) {
+        if (mainWindow) {
+          mainWindow.webContents.send('maintenance:expired', {
+            tier: license.tier,
+            expiredAt: license.maintenance_expires_at,
+          });
+        }
+        console.warn(`MAINTENANCE EXPIRED: Maintenance support expired on ${maintenanceExpiry.toLocaleDateString()}`);
+      } else if (daysUntilMaintExpiry <= 30) {
+        if (mainWindow) {
+          mainWindow.webContents.send('maintenance:expiring-soon', {
+            tier: license.tier,
+            expiresAt: license.maintenance_expires_at,
+            daysRemaining: daysUntilMaintExpiry,
+          });
+        }
+        console.warn(`MAINTENANCE WARNING: Maintenance support expires in ${daysUntilMaintExpiry} days`);
+      }
+    }
+  } catch (error) {
+    console.error('Periodic license check error:', error.message);
+  }
+}
+
+/**
+ * Start periodic license expiration checks
+ */
+function startPeriodicLicenseCheck() {
+  // Initial check after a delay (give app time to fully load)
+  setTimeout(performPeriodicLicenseCheck, 5000);
+  
+  // Periodic checks
+  licenseCheckInterval = setInterval(performPeriodicLicenseCheck, LICENSE_CHECK_INTERVAL_MS);
+  console.log('Periodic license check started (interval: 1 hour)');
+}
+
+/**
+ * Stop periodic license checks
+ */
+function stopPeriodicLicenseCheck() {
+  if (licenseCheckInterval) {
+    clearInterval(licenseCheckInterval);
+    licenseCheckInterval = null;
+  }
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   console.log('TransTrack starting...');
@@ -340,6 +439,9 @@ app.whenReady().then(async () => {
     // Create main window
     createMainWindow();
     
+    // Start periodic license expiration checks
+    startPeriodicLicenseCheck();
+    
     // If evaluation build, log restriction info
     if (buildVersion === BUILD_VERSION.EVALUATION) {
       console.log('Running in Evaluation mode - restrictions apply:');
@@ -368,6 +470,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
+  console.log('Stopping periodic license checks...');
+  stopPeriodicLicenseCheck();
   console.log('Closing database connection...');
   await closeDatabase();
 });
