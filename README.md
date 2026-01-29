@@ -154,7 +154,7 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 
 ### Operational Risk Dashboard with Barriers
 <p align="center">
-  <img src="docs/images/barriers-dashboard.png" alt="Barriers Dashboard" width="700">
+  <img src="docs/images/risk-dashboard-barriers.png" alt="Risk Dashboard with Readiness Barriers" width="700">
 </p>
 
 ### Compliance Center
