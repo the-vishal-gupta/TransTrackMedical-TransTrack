@@ -99,7 +99,8 @@ function assertThrows(fn, expectedError, message) {
 let db = null;
 
 function setupTestDatabase() {
-  const Database = require('better-sqlite3');
+  // Use better-sqlite3-multiple-ciphers which is already installed in the project
+  const Database = require('better-sqlite3-multiple-ciphers');
   db = new Database(':memory:');
   
   // Create organizations table
