@@ -100,18 +100,18 @@ const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours (reduced from 24 for 
 // Allowed columns for ORDER BY to prevent SQL injection
 // Note: org_id is NOT included as it should never be used for sorting (it's always filtered, not sorted)
 const ALLOWED_ORDER_COLUMNS = {
-  patients: ['id', 'patient_id', 'first_name', 'last_name', 'blood_type', 'organ_needed', 'medical_urgency', 'waitlist_status', 'priority_score', 'created_at', 'updated_at', 'created_date', 'updated_date'],
-  donor_organs: ['id', 'donor_id', 'organ_type', 'blood_type', 'organ_status', 'status', 'created_at', 'updated_at', 'created_date', 'updated_date'],
-  matches: ['id', 'compatibility_score', 'match_status', 'priority_rank', 'created_at', 'updated_at', 'created_date', 'updated_date'],
-  notifications: ['id', 'title', 'notification_type', 'is_read', 'priority_level', 'created_at', 'created_date'],
-  notification_rules: ['id', 'rule_name', 'trigger_event', 'priority_level', 'is_active', 'created_at', 'created_date'],
-  priority_weights: ['id', 'name', 'is_active', 'created_at', 'updated_at', 'created_date', 'updated_date'],
-  ehr_integrations: ['id', 'name', 'type', 'is_active', 'last_sync_date', 'created_at', 'created_date'],
-  ehr_imports: ['id', 'import_type', 'status', 'created_at', 'completed_date', 'created_date'],
-  ehr_sync_logs: ['id', 'sync_type', 'direction', 'status', 'created_at', 'created_date'],
-  ehr_validation_rules: ['id', 'field_name', 'rule_type', 'is_active', 'created_at', 'created_date'],
-  audit_logs: ['id', 'action', 'entity_type', 'user_email', 'created_at', 'created_date'],
-  users: ['id', 'email', 'full_name', 'role', 'is_active', 'created_at', 'last_login', 'created_date'],
+  patients: ['id', 'patient_id', 'first_name', 'last_name', 'blood_type', 'organ_needed', 'medical_urgency', 'waitlist_status', 'priority_score', 'created_at', 'updated_at'],
+  donor_organs: ['id', 'donor_id', 'organ_type', 'blood_type', 'organ_status', 'status', 'created_at', 'updated_at'],
+  matches: ['id', 'compatibility_score', 'match_status', 'priority_rank', 'created_at', 'updated_at'],
+  notifications: ['id', 'title', 'notification_type', 'is_read', 'priority_level', 'created_at'],
+  notification_rules: ['id', 'rule_name', 'trigger_event', 'priority_level', 'is_active', 'created_at'],
+  priority_weights: ['id', 'name', 'is_active', 'created_at', 'updated_at'],
+  ehr_integrations: ['id', 'name', 'type', 'is_active', 'last_sync_date', 'created_at'],
+  ehr_imports: ['id', 'import_type', 'status', 'created_at', 'completed_date'],
+  ehr_sync_logs: ['id', 'sync_type', 'direction', 'status', 'created_at'],
+  ehr_validation_rules: ['id', 'field_name', 'rule_type', 'is_active', 'created_at'],
+  audit_logs: ['id', 'action', 'entity_type', 'user_email', 'created_at'],
+  users: ['id', 'email', 'full_name', 'role', 'is_active', 'created_at', 'last_login'],
   readiness_barriers: ['id', 'patient_id', 'barrier_type', 'status', 'risk_level', 'created_at', 'updated_at'],
   adult_health_history_questionnaires: ['id', 'patient_id', 'status', 'expiration_date', 'created_at', 'updated_at'],
   organizations: ['id', 'name', 'type', 'status', 'created_at', 'updated_at'],
@@ -1167,7 +1167,7 @@ function setupIPCHandlers() {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
           // Validate filter column name to prevent SQL injection
-          if (!allowedColumns.includes(key) && !['id', 'created_at', 'updated_at', 'created_date', 'updated_date'].includes(key)) {
+          if (!allowedColumns.includes(key) && !['id', 'created_at', 'updated_at'].includes(key)) {
             throw new Error(`Invalid filter field: ${key}`);
           }
           query += ` AND ${key} = ?`;
@@ -1188,7 +1188,7 @@ function setupIPCHandlers() {
       
       query += ` ORDER BY ${field} ${desc ? 'DESC' : 'ASC'}`;
     } else {
-      query += ' ORDER BY COALESCE(created_at, created_date) DESC';
+      query += ' ORDER BY created_at DESC';
     }
     
     // Handle limit with bounds validation
@@ -1825,7 +1825,7 @@ function setupIPCHandlers() {
       query += ` ORDER BY ${field} ${desc ? 'DESC' : 'ASC'}`;
     } else {
       // Use created_at (new schema) or created_date (old schema)
-      query += ' ORDER BY COALESCE(created_at, created_date) DESC';
+      query += ' ORDER BY created_at DESC';
     }
     
     // Handle limit with bounds validation

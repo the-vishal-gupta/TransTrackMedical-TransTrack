@@ -34,7 +34,7 @@ function getComplianceSummary() {
       COUNT(DISTINCT user_email) as uniqueUsers,
       COUNT(DISTINCT entity_type) as entityTypes
     FROM audit_logs
-    WHERE created_date >= ?
+    WHERE created_at >= ?
   `).get(thirtyDaysAgo);
   
   // User statistics
@@ -81,7 +81,7 @@ function getAuditTrailForCompliance(options = {}) {
   let query = `
     SELECT 
       id, action, entity_type, entity_id, patient_name,
-      details, user_email, user_role, created_date
+      details, user_email, user_role, created_at
     FROM audit_logs
     WHERE 1=1
   `;
@@ -89,12 +89,12 @@ function getAuditTrailForCompliance(options = {}) {
   const params = [];
   
   if (options.startDate) {
-    query += ' AND created_date >= ?';
+    query += ' AND created_at >= ?';
     params.push(options.startDate);
   }
   
   if (options.endDate) {
-    query += ' AND created_date <= ?';
+    query += ' AND created_at <= ?';
     params.push(options.endDate);
   }
   
@@ -113,7 +113,7 @@ function getAuditTrailForCompliance(options = {}) {
     params.push(options.action);
   }
   
-  query += ' ORDER BY created_date DESC';
+  query += ' ORDER BY created_at DESC';
   
   if (options.limit) {
     query += ' LIMIT ?';
