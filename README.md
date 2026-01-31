@@ -194,14 +194,16 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 
 ### Pre-built Installers
 
-Download the latest release for your platform:
+Download the latest release for your platform from the [Releases page](https://github.com/NeuroKoder3/TransTrackMedical-TransTrack/releases).
 
-| Platform | Download |
-|----------|----------|
-| Windows (x64) | [TransTrack-1.0.0-x64.exe](../../releases) |
-| macOS (Intel) | [TransTrack-1.0.0-x64.dmg](../../releases) |
-| macOS (Apple Silicon) | [TransTrack-1.0.0-arm64.dmg](../../releases) |
-| Linux | [TransTrack-1.0.0.AppImage](../../releases) |
+| Platform | File |
+|----------|------|
+| Windows (x64) | `TransTrack-1.0.0-x64.exe` |
+| macOS (Intel) | `TransTrack-1.0.0-x64.dmg` |
+| macOS (Apple Silicon) | `TransTrack-1.0.0-arm64.dmg` |
+| Linux | `TransTrack-1.0.0.AppImage` |
+
+> **Note:** If no releases are available yet, you can build from source using the instructions below.
 
 ### Build from Source
 
