@@ -5,28 +5,32 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * 0'
   workflow_dispatch:
 
 permissions:
-  security-events: write
+  actions: read
   contents: read
+  security-events: write
 
 jobs:
   analyze:
+    name: Analyze
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: github/codeql-action/init@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-      
-      - uses: actions/setup-node@v4
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
         with:
-          node-version: '20'
-      
-      - run: npm install --ignore-scripts
-      
-      - run: npm run build || true
-      
-      - uses: github/codeql-action/analyze@v3
+          category: "/language:javascript-typescript"
