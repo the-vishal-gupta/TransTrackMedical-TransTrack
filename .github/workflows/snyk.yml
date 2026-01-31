@@ -33,20 +33,15 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Authenticate Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
       - name: Run Snyk test
-        run: snyk test --severity-threshold=high --json > snyk-results.json || true
+        run: snyk test --severity-threshold=high || true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Display Snyk results
-        run: |
-          echo "=== Snyk Security Scan Results ==="
-          cat snyk-results.json | head -200 || echo "No results file"
+      - name: Run Snyk test (JSON output)
+        run: snyk test --json > snyk-results.json || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       - name: Upload Snyk results
         uses: actions/upload-artifact@v4
