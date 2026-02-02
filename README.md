@@ -2,20 +2,19 @@
 
 ## Transplant Operations & Workflow Management
 
-[![License](https://img.shields.io/badge/license-Commercial-blue.svg)](LICENSE)
-[![Price](https://img.shields.io/badge/price-from%20%242%2C499-green.svg)](PRICING.md)
+[![License](https://img.shields.io/badge/license-Evaluation%20Available-blue.svg)](LICENSE)
 [![HIPAA Compliant](https://img.shields.io/badge/HIPAA-Compliant-green.svg)](docs/COMPLIANCE.md)
 [![FDA 21 CFR Part 11](https://img.shields.io/badge/FDA-21%20CFR%20Part%2011-green.svg)](docs/COMPLIANCE.md)
 [![AATB Standards](https://img.shields.io/badge/AATB-Standards-green.svg)](docs/COMPLIANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
-> **⚠️ IMPORTANT LICENSE NOTICE**
+> **📋 EVALUATION ACCESS**
 >
-> TransTrack is **source-available commercial software**.
+> TransTrack is available for **evaluation by qualified healthcare organizations**.
 >
-> - Viewing and evaluating the source code is permitted for a limited time (14 days)
-> - Evaluation is limited to non-clinical, non-operational testing only
-> - **Use in clinical, operational, or production environments requires a [commercial license](PRICING.md)**
+> - Request an evaluation to explore the full feature set
+> - Evaluation is intended for non-clinical, non-operational testing
+> - Contact us to discuss your organization's needs and licensing options
 >
 > See [LICENSE](LICENSE) and [LICENSE_NOTICE.md](LICENSE_NOTICE.md) for full terms.
 
@@ -65,7 +64,7 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 - **Readiness Tracking** - Operational indicators for internal workflow visibility
 
 <p align="center">
-  <img src="docs/images/barriers-dashboard.png" alt="Risk Intelligence Dashboard with Readiness Barriers" width="700">
+  <img src="docs/images/risk-intelligence-dashboard.png" alt="Operational Risk Intelligence Dashboard" width="700">
 </p>
 
 ---
@@ -152,9 +151,9 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
   <img src="docs/images/readiness-barriers.png" alt="Readiness Barriers" width="700">
 </p>
 
-### Operational Risk Dashboard with Barriers
+### Patient Documentation & Workflow Tracking
 <p align="center">
-  <img src="docs/images/risk-dashboard-barriers.png" alt="Risk Dashboard with Readiness Barriers" width="700">
+  <img src="docs/images/patient-documentation-tracking.png" alt="Patient Documentation and Workflow Tracking" width="700">
 </p>
 
 ### Compliance Center
@@ -186,11 +185,11 @@ The heart of TransTrack is proactive risk detection that helps teams stay ahead 
 
 ## Installation
 
-> **⚠️ IMPORTANT**
+> **📋 EVALUATION NOTE**
 >
-> Pre-built installers and production builds are provided for **licensed or authorized evaluation use only**.
+> Pre-built installers are available for organizations interested in evaluating TransTrack.
 >
-> **Do not use TransTrack with live patient data** without a valid commercial license and appropriate institutional approvals.
+> **Evaluation environments should use sample/test data only.** Contact us to discuss production deployment requirements.
 
 ### Pre-built Installers
 
@@ -224,9 +223,9 @@ npm run build:electron
 
 ---
 
-## Quick Start (Evaluation Only)
+## Quick Start (Evaluation)
 
-> **Note**: These steps are for authorized evaluation environments only. Do not use with live patient data without a commercial license.
+> **Note**: These steps are for authorized evaluation environments only. Do not use with live patient data during evaluation.
 
 1. **Launch TransTrack** from your applications menu
 2. **Login** with evaluation credentials:
@@ -234,7 +233,7 @@ npm run build:electron
    - Password: `admin123`
 3. **Change your password** immediately (Settings → Security)
 4. **Explore features** using sample/test data only
-5. **Contact sales** for production licensing: Trans_Track@outlook.com
+5. **Contact us** to discuss your organization's needs: Trans_Track@outlook.com
 
 ---
 
@@ -333,35 +332,34 @@ TransTrack is designed for healthcare environments requiring strict regulatory c
 
 ## Distribution Versions
 
-TransTrack is distributed in two versions:
+TransTrack is available in versions tailored to your organization's evaluation and deployment needs:
 
 ### Evaluation Version
 
 Download: `TransTrack-Evaluation-[version]`
 
-**Purpose:** Product evaluation only - NOT for clinical or operational use.
+**Purpose:** Explore TransTrack's full capabilities in a non-production environment.
 
-**Restrictions:**
-- 14-day time limit
-- Maximum 50 patients, 5 donors
-- Single user only
-- No data export/import
-- No FHIR integration
-- Watermarked UI
+**Includes:**
+- Access to core features for evaluation
+- Sample data for testing workflows
+- Documentation and support resources
 
-### Enterprise Version
+### Production Version
 
 Download: `TransTrack-Enterprise-[version]`
 
-**Purpose:** Licensed organizational use for production environments.
+**Purpose:** Full organizational deployment for production environments.
 
 **Features:**
-- Full feature set based on license tier
-- License enforcement
+- Complete feature set
 - All compliance features enabled
-- Organization binding
+- Organization-specific configuration
+- Full support and maintenance
 
 📥 **[Download from GitHub Releases](../../releases)**
+
+Contact us at Trans_Track@outlook.com to discuss which version is right for your organization.
 
 ---
 
@@ -396,28 +394,30 @@ npm run lint
 
 ---
 
-## Licensing & Pricing
+## Evaluation & Licensing
 
-TransTrack is commercial software requiring a paid license for production use.
+TransTrack is available for evaluation by qualified healthcare organizations interested in improving their transplant operations workflow.
 
-*Pricing reflects the regulatory, validation, and support requirements of clinical and operational healthcare environments.*
+### Request an Evaluation
 
-| License | Price | Installations | Support |
-|---------|-------|---------------|---------|
-| **Starter** | $2,499 | 1 workstation | Email (48hr) |
-| **Professional** | $7,499 | Up to 5 | Priority (24hr) |
-| **Enterprise** | $24,999 | Unlimited | 24/7 Phone & Email |
+We offer evaluation access to organizations looking to explore TransTrack's capabilities:
 
-### [View Full Pricing Details →](PRICING.md)
+- **Full-featured evaluation** - Experience the complete feature set
+- **Guided demonstrations** - Schedule a walkthrough with our team
+- **Technical consultation** - Discuss integration and compliance requirements
+- **Flexible licensing options** - Tailored to your organization's needs
 
-**Discounts Available:**
-- Nonprofit organizations: 25% off
-- Academic institutions: 40% off
-- Multi-year commitments: Volume pricing
+### Who Qualifies
 
-### 14-Day Evaluation
+- Transplant centers and hospitals
+- Organ Procurement Organizations (OPOs)
+- Tissue banks
+- Healthcare IT and clinical informatics teams
+- Compliance and quality assurance departments
 
-Qualified healthcare organizations can request a free 14-day evaluation license for non-clinical, non-operational testing only.
+### Get Started
+
+Contact us to discuss your organization's needs and request evaluation access:
 
 📧 **Trans_Track@outlook.com**
 
@@ -425,17 +425,17 @@ Qualified healthcare organizations can request a free 14-day evaluation license 
 
 ## Support
 
-### Sales & Licensing
+### Evaluation & General Inquiries
 📧 Trans_Track@outlook.com
 
-### Technical Support (Licensed Customers)
+### Technical Support
 📧 Trans_Track@outlook.com
 
-### Enterprise Solutions
+### Enterprise & Custom Solutions
 Custom integrations, training, and dedicated support:
 📧 Trans_Track@outlook.com
 
-### Pre-Sales Questions
+### Questions & Discussions
 - [GitHub Discussions](../../discussions)
 - [Request a Demo](mailto:Trans_Track@outlook.com)
 
