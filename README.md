@@ -8,6 +8,14 @@
 [![AATB Standards](https://img.shields.io/badge/AATB-Standards-green.svg)](docs/COMPLIANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
+---
+
+## 🎥 Demo Video  
+[▶️ Watch or Download the Demo](https://github.com/TransTrackMedical/TransTrack/releases/download/v1.0.0/TransTrack-Demo.mp4)  
+> _Short overview of TransTrack’s dashboard, patient workflow, and readiness tracking interface._
+
+---
+
 > **📋 EVALUATION ACCESS**
 >
 > TransTrack is available for **evaluation by qualified healthcare organizations**.
